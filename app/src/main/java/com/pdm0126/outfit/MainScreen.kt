@@ -16,12 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,11 +51,11 @@ fun MainScreen() {
         topLevelRoutes = screens.toSet()
     )
     val navigator = remember { Navigator(navigationState) }
-    
+
     val pagerState = rememberPagerState(pageCount = { screens.size })
     val flingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
-        snapPositionalThreshold = 0.8f 
+        snapPositionalThreshold = 0.8f
     )
 
     LaunchedEffect(navigationState.topLevelRoute) {
@@ -64,7 +66,7 @@ fun MainScreen() {
     }
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
+        snapshotFlow { pagerState.settledPage }.collect { page ->
             val screen = screens[page]
             if (navigationState.topLevelRoute != screen) {
                 navigationState.topLevelRoute = screen
@@ -74,7 +76,7 @@ fun MainScreen() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFEDDDCC) 
+        containerColor = Color(0xFFEDDDCC)
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
@@ -95,7 +97,7 @@ fun MainScreen() {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = innerPadding.calculateBottomPadding()) 
+                    .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 FloatingBottomNavBar(
                     screens = screens,
@@ -124,14 +126,18 @@ fun FloatingBottomNavBar(
         contentAlignment = Alignment.BottomCenter
     ) {
         val maxWidth = maxWidth
-        
+
         Box(
             modifier = Modifier
                 .height(72.dp)
                 .fillMaxWidth()
-                .blur(30.dp)
-                .clip(RoundedCornerShape(36.dp))
-                .background(Color.White.copy(alpha = 0.1f))
+                .graphicsLayer {
+                    alpha = 0.99f
+                    clip = true
+                    shape = RoundedCornerShape(36.dp)
+                }
+                .blur(20.dp)
+                .background(Color.White.copy(alpha = 0.15f))
         )
 
         Box(
@@ -142,8 +148,8 @@ fun FloatingBottomNavBar(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.15f)
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White.copy(alpha = 0.05f)
                         )
                     )
                 )
@@ -187,7 +193,7 @@ fun FloatingBottomNavBar(
         ) {
             screens.forEach { screen ->
                 val isSelected = navigationState.topLevelRoute == screen
-                
+
                 IconButton(
                     onClick = { onItemSelected(screen) },
                     modifier = Modifier.weight(1f).fillMaxHeight()
@@ -199,7 +205,7 @@ fun FloatingBottomNavBar(
                         Icon(
                             imageVector = screen.icon,
                             contentDescription = screen.title,
-                            tint = if (isSelected) LimeGreen else Color.Black.copy(alpha = 0.5f),
+                            tint = if (isSelected) Color(0xFF423D38) else Color.Black.copy(alpha = 0.4f),
                             modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
                         )
                     }
@@ -217,13 +223,13 @@ fun HomeScreen() {
             .padding(horizontal = 16.dp)
     ) {
         Text(
-            text = "Welcome to Outfit",
+            text = "Outfix",
             fontSize = 32.sp,
             fontWeight = FontWeight.Black,
             color = Color(0xFF423D38),
             modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
         )
-        
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -237,7 +243,7 @@ fun HomeScreen() {
                         .aspectRatio(0.8f)
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (index % 2 == 0) LimeGreen.copy(alpha = 0.3f) 
+                            if (index % 2 == 0) LimeGreen.copy(alpha = 0.3f)
                             else Color.White.copy(alpha = 0.8f)
                         ),
                     contentAlignment = Alignment.Center
