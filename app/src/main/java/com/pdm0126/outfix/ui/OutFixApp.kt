@@ -46,6 +46,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.foundation.gestures.scrollBy
+import kotlin.math.roundToInt
 
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
@@ -150,6 +158,10 @@ fun FloatingBottomNavBar(
     onItemSelected: (OutFixScreen) -> Unit
 ) {
     var glassOffset by remember { mutableStateOf(Offset.Zero) }
+    val coroutineScope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -158,6 +170,13 @@ fun FloatingBottomNavBar(
         contentAlignment = Alignment.BottomCenter
     ) {
         val maxWidth = maxWidth
+        val itemWidth = maxWidth / screens.size
+        val indicatorOffset by remember {
+            derivedStateOf {
+                val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                itemWidth * position
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -186,7 +205,7 @@ fun FloatingBottomNavBar(
                     }
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE0E0E0)))
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2F2F2F)))
             }
 
             Box(
@@ -214,11 +233,27 @@ fun FloatingBottomNavBar(
             )
         }
 
-        val itemWidth = maxWidth / screens.size
-        val indicatorOffset by remember {
-            derivedStateOf {
-                val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
-                itemWidth * position
+        Row(
+            modifier = Modifier
+                .height(72.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            screens.forEach { screen ->
+                val isSelected = navigationState.topLevelRoute == screen
+                val iconSize by animateDpAsState(targetValue = if (isSelected) 34.dp else 26.dp, label = "iconSize")
+                IconButton(
+                    onClick = { onItemSelected(screen) },
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                ) {
+                    Icon(
+                        imageVector = screen.icon,
+                        contentDescription = screen.title,
+                        tint = Color.White,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
             }
         }
 
@@ -234,33 +269,96 @@ fun FloatingBottomNavBar(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.35f))
-            )
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                coroutineScope.launch {
+                                    val closestPage = (pagerState.currentPage + pagerState.currentPageOffsetFraction).roundToInt()
+                                    pagerState.animateScrollToPage(closestPage)
+                                }
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            val scrollAmount = dragAmount * (screenWidthPx / itemWidth.toPx())
+                            coroutineScope.launch {
+                                pagerState.scrollBy(scrollAmount)
+                            }
+                        }
+                    }
+            ) {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .liquidGlass(
+                                blur = 10f,
+                                saturation = 1.5f,
+                                refraction = 0.8f,
+                                curve = 0.6f,
+                                dispersion = 0.15f,
+                                normalizedRadius = 0.5f
+                            )
+                    ) {
+                        val ballOffsetX = indicatorOffset.toPx() + (itemWidth.toPx() - 56.dp.toPx()) / 2f
+                        val ballOffsetY = (72.dp.toPx() - 56.dp.toPx()) / 2f
+                        translate(
+                            left = -glassOffset.x - ballOffsetX,
+                            top = -glassOffset.y - ballOffsetY
+                        ) {
+                            drawLayer(backgroundLayer)
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+                }
+
+                Box(modifier = Modifier.fillMaxSize().border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = CircleShape
+                ))
+            }
         }
 
-        Row(
+        Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .height(72.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+                .graphicsLayer {
+                    clip = true
+                    shape = object : androidx.compose.ui.graphics.Shape {
+                        override fun createOutline(
+                            size: androidx.compose.ui.geometry.Size,
+                            layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                            density: androidx.compose.ui.unit.Density
+                        ): androidx.compose.ui.graphics.Outline {
+                            val centerX = indicatorOffset.toPx() + (itemWidth.toPx() / 2f)
+                            val centerY = size.height / 2f
+                            val radius = 28.dp.toPx()
+                            return androidx.compose.ui.graphics.Outline.Generic(androidx.compose.ui.graphics.Path().apply {
+                                addOval(androidx.compose.ui.geometry.Rect(centerX - radius, centerY - radius, centerX + radius, centerY + radius))
+                            })
+                        }
+                    }
+                }
         ) {
-            screens.forEach { screen ->
-                val isSelected = navigationState.topLevelRoute == screen
-
-                IconButton(
-                    onClick = { onItemSelected(screen) },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                screens.forEach { screen ->
+                    val isSelected = navigationState.topLevelRoute == screen
+                    val iconSize by animateDpAsState(targetValue = if (isSelected) 34.dp else 26.dp, label = "iconSizeYellow")
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = screen.icon,
-                            contentDescription = screen.title,
-                            tint = if (isSelected) Color(0xFFFBEBB5) else Color.White,
-                            modifier = Modifier.size(if (isSelected) 30.dp else 26.dp)
+                            contentDescription = null,
+                            tint = Color(0xFF1A1A1A), // Amarillo
+                            modifier = Modifier.size(iconSize)
                         )
                     }
                 }
@@ -287,7 +385,7 @@ fun ScreenPlaceholder(screen: OutFixScreen) {
                 text = screen.title,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF423D38)
+                color = Color(0xFFDCB888)
             )
         }
     }
