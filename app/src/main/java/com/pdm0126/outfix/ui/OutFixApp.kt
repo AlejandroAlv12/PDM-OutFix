@@ -174,11 +174,11 @@ fun FloatingBottomNavBar(
                     modifier = Modifier
                         .fillMaxSize()
                         .liquidGlass(
-                            blur = 5f,
-                            saturation = 1.2f,
+                            blur = 18f,
+                            saturation = 1.5f,
                             refraction = 0.55f,
                             curve = 0.50f,
-                            dispersion = 0.0f
+                            dispersion = 0.25f
                         )
                 ) {
                     translate(left = -glassOffset.x, top = -glassOffset.y) {
