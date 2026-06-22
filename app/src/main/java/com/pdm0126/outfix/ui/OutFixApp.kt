@@ -46,6 +46,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.platform.LocalConfiguration
@@ -240,12 +242,21 @@ fun FloatingBottomNavBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            screens.forEach { screen ->
-                val isSelected = navigationState.topLevelRoute == screen
-                val iconSize by animateDpAsState(targetValue = if (isSelected) 34.dp else 26.dp, label = "iconSize")
-                IconButton(
-                    onClick = { onItemSelected(screen) },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            screens.forEachIndexed { index, screen ->
+                val distance = kotlin.math.abs(position - index).coerceIn(0f, 1f)
+                val iconSize = 34.dp - ((34.dp - 26.dp) * distance)
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onItemSelected(screen) }
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = screen.icon,
@@ -256,7 +267,7 @@ fun FloatingBottomNavBar(
                 }
             }
         }
-
+        
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -312,6 +323,8 @@ fun FloatingBottomNavBar(
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
                 }
 
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
+
                 Box(modifier = Modifier.fillMaxSize().border(
                     width = 1.dp,
                     color = Color.White.copy(alpha = 0.2f),
@@ -347,9 +360,11 @@ fun FloatingBottomNavBar(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                screens.forEach { screen ->
-                    val isSelected = navigationState.topLevelRoute == screen
-                    val iconSize by animateDpAsState(targetValue = if (isSelected) 34.dp else 26.dp, label = "iconSizeYellow")
+                val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                screens.forEachIndexed { index, screen ->
+                    val distance = kotlin.math.abs(position - index).coerceIn(0f, 1f)
+                    val iconSize = 34.dp - ((34.dp - 26.dp) * distance)
+                    
                     Box(
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         contentAlignment = Alignment.Center
@@ -357,7 +372,7 @@ fun FloatingBottomNavBar(
                         Icon(
                             imageVector = screen.icon,
                             contentDescription = null,
-                            tint = Color(0xFF1A1A1A), // Amarillo
+                            tint = Color(0xFFDCB888),
                             modifier = Modifier.size(iconSize)
                         )
                     }
