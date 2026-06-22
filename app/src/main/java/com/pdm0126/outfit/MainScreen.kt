@@ -33,6 +33,9 @@ import com.pdm0126.outfit.ui.theme.GlassWhite
 import com.pdm0126.outfit.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.hazeEffect
 
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
@@ -74,11 +77,13 @@ fun MainScreen() {
         }
     }
 
+    val hazeState = remember { HazeState() }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFEDDDCC)
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().hazeSource(state = hazeState)) {
             HorizontalPager(
                 state = pagerState,
                 flingBehavior = flingBehavior,
@@ -103,6 +108,7 @@ fun MainScreen() {
                     screens = screens,
                     navigationState = navigationState,
                     pagerState = pagerState,
+                    hazeState = hazeState,
                     onItemSelected = { screen ->
                         navigator.navigate(screen)
                     }
@@ -117,6 +123,7 @@ fun FloatingBottomNavBar(
     screens: List<OutFixScreen>,
     navigationState: NavigationState,
     pagerState: PagerState,
+    hazeState: HazeState,
     onItemSelected: (OutFixScreen) -> Unit
 ) {
     BoxWithConstraints(
@@ -131,12 +138,8 @@ fun FloatingBottomNavBar(
             modifier = Modifier
                 .height(72.dp)
                 .fillMaxWidth()
-                .graphicsLayer {
-                    alpha = 0.99f
-                    clip = true
-                    shape = RoundedCornerShape(36.dp)
-                }
-                .blur(20.dp)
+                .clip(RoundedCornerShape(36.dp))
+                .hazeEffect(state = hazeState)
                 .background(Color.White.copy(alpha = 0.15f))
         )
 
