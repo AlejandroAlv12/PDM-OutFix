@@ -1,4 +1,4 @@
-package com.pdm0126.outfit
+package com.pdm0126.outfit.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -13,7 +13,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -33,17 +33,29 @@ import com.pdm0126.outfit.ui.theme.GlassWhite
 import com.pdm0126.outfit.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.hazeEffect
+import android.os.Build
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import com.pdm0126.outfit.screens.home.HomeScreen
+import com.pdm0126.outfit.screens.editor.OutfitEditorScreen
+import com.pdm0126.outfit.screens.planner.WeeklyPlannerScreen
+import com.pdm0126.outfit.screens.closet.ClosetScreen
+import com.pdm0126.outfit.screens.profile.ProfileScreen
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.drawscope.translate
 
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
-    Home("Home", Icons.Default.Home),
-    OutfitEditor("Editor", Icons.Default.Edit),
-    WeeklyPlanner("Planner", Icons.Default.DateRange),
-    Closet("Closet", Icons.Default.Checkroom),
-    Profile("Profile", Icons.Default.Person)
+    Home("Home", Icons.Outlined.Home),
+    OutfitEditor("Editor", Icons.Outlined.Checkroom),
+    WeeklyPlanner("Planner", Icons.Outlined.CalendarToday),
+    Closet("Closet", Icons.Outlined.DeleteOutline),
+    Profile("Profile", Icons.Outlined.Person)
 }
 
 @Composable
@@ -77,17 +89,28 @@ fun MainScreen() {
         }
     }
 
-    val hazeState = remember { HazeState() }
+    val backgroundLayer = rememberGraphicsLayer()
+    var pagerCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFEDDDCC)
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().hazeSource(state = hazeState)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEDDDCC))
+                    .onGloballyPositioned { pagerCoords = it }
+                    .drawWithContent {
+                        backgroundLayer.record {
+                            drawRect(Color(0xFFEDDDCC))
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(backgroundLayer)
+                    },
                 state = pagerState,
                 flingBehavior = flingBehavior,
-                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = innerPadding.calculateTopPadding())
             ) { page ->
                 when (screens[page]) {
@@ -108,7 +131,8 @@ fun MainScreen() {
                     screens = screens,
                     navigationState = navigationState,
                     pagerState = pagerState,
-                    hazeState = hazeState,
+                    backgroundLayer = backgroundLayer,
+                    pagerCoords = pagerCoords,
                     onItemSelected = { screen ->
                         navigator.navigate(screen)
                     }
@@ -123,9 +147,32 @@ fun FloatingBottomNavBar(
     screens: List<OutFixScreen>,
     navigationState: NavigationState,
     pagerState: PagerState,
-    hazeState: HazeState,
+    backgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer,
+    pagerCoords: LayoutCoordinates?,
     onItemSelected: (OutFixScreen) -> Unit
 ) {
+    var glassOffset by remember { mutableStateOf(Offset.Zero) }
+    var glassSize by remember { mutableStateOf(Size.Zero) }
+
+    val renderEffect = remember {
+        if (Build.VERSION.SDK_INT >= 31) {
+            val blurEffect = android.graphics.RenderEffect.createBlurEffect(
+                30f, 
+                30f,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+
+            val colorMatrix = android.graphics.ColorMatrix().apply {
+                setSaturation(1.2f)
+            }
+            val colorEffect = android.graphics.RenderEffect.createColorFilterEffect(
+                android.graphics.ColorMatrixColorFilter(colorMatrix)
+            )
+
+            android.graphics.RenderEffect.createChainEffect(colorEffect, blurEffect).asComposeRenderEffect()
+        } else null
+    }
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
@@ -138,35 +185,54 @@ fun FloatingBottomNavBar(
             modifier = Modifier
                 .height(72.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(36.dp))
-                .hazeEffect(state = hazeState)
-                .background(Color.White.copy(alpha = 0.15f))
-        )
+                .onGloballyPositioned { coords ->
+                    glassSize = Size(coords.size.width.toFloat(), coords.size.height.toFloat())
+                    if (pagerCoords != null) {
+                        glassOffset = pagerCoords.localPositionOf(coords, Offset.Zero)
+                    }
+                }
+        ) {
+            if (Build.VERSION.SDK_INT >= 31) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(36.dp))
+                        .graphicsLayer {
+                            this.renderEffect = renderEffect
+                        }
+                ) {
+                    translate(left = -glassOffset.x, top = -glassOffset.y) {
+                        drawLayer(backgroundLayer)
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE0E0E0)))
+            }
 
-        Box(
-            modifier = Modifier
-                .height(72.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(36.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.3f),
-                            Color.White.copy(alpha = 0.05f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(36.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.15f),
+                                Color.Black.copy(alpha = 0.25f)
+                            )
                         )
                     )
-                )
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.5f),
-                            Color.White.copy(alpha = 0.1f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(36.dp)
-                )
-        )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.35f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(36.dp)
+                    )
+            )
+        }
 
         val itemWidth = maxWidth / screens.size
         val indicatorOffset by remember {
@@ -181,11 +247,16 @@ fun FloatingBottomNavBar(
                 .align(Alignment.CenterStart)
                 .offset(x = indicatorOffset)
                 .width(itemWidth)
-                .height(72.dp)
-                .padding(6.dp)
-                .clip(RoundedCornerShape(36.dp))
-                .background(LimeGreen.copy(alpha = 0.25f))
-        )
+                .height(72.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.35f))
+            )
+        }
 
         Row(
             modifier = Modifier
@@ -208,50 +279,10 @@ fun FloatingBottomNavBar(
                         Icon(
                             imageVector = screen.icon,
                             contentDescription = screen.title,
-                            tint = if (isSelected) Color(0xFF423D38) else Color.Black.copy(alpha = 0.4f),
-                            modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
+                            tint = if (isSelected) Color(0xFFFBEBB5) else Color.White,
+                            modifier = Modifier.size(if (isSelected) 30.dp else 26.dp)
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HomeScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        Text(
-            text = "Outfix",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFF423D38),
-            modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
-        )
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 120.dp)
-        ) {
-            items(10) { index ->
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(0.8f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (index % 2 == 0) LimeGreen.copy(alpha = 0.3f)
-                            else Color.White.copy(alpha = 0.8f)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Outfit #$index", fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -281,8 +312,3 @@ fun ScreenPlaceholder(screen: OutFixScreen) {
         }
     }
 }
-
-@Composable fun OutfitEditorScreen() = ScreenPlaceholder(OutFixScreen.OutfitEditor)
-@Composable fun WeeklyPlannerScreen() = ScreenPlaceholder(OutFixScreen.WeeklyPlanner)
-@Composable fun ClosetScreen() = ScreenPlaceholder(OutFixScreen.Closet)
-@Composable fun ProfileScreen() = ScreenPlaceholder(OutFixScreen.Profile)

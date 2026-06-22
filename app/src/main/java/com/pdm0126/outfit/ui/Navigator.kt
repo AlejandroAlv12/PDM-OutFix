@@ -1,4 +1,4 @@
-package com.pdm0126.outfit
+package com.pdm0126.outfit.ui
 
 import androidx.navigation3.runtime.NavKey
 

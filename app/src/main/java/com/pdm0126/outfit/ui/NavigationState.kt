@@ -1,4 +1,4 @@
-package com.pdm0126.outfit
+package com.pdm0126.outfit.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
