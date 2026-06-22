@@ -4,8 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
@@ -29,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import com.pdm0126.outfix.ui.theme.GlassWhite
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
@@ -152,9 +150,6 @@ fun FloatingBottomNavBar(
     onItemSelected: (OutFixScreen) -> Unit
 ) {
     var glassOffset by remember { mutableStateOf(Offset.Zero) }
-    var glassSize by remember { mutableStateOf(Size.Zero) }
-
-
 
     BoxWithConstraints(
         modifier = Modifier
@@ -169,7 +164,6 @@ fun FloatingBottomNavBar(
                 .height(72.dp)
                 .fillMaxWidth()
                 .onGloballyPositioned { coords ->
-                    glassSize = Size(coords.size.width.toFloat(), coords.size.height.toFloat())
                     if (pagerCoords != null) {
                         glassOffset = pagerCoords.localPositionOf(coords, Offset.Zero)
                     }

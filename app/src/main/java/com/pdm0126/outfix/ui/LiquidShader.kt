@@ -16,7 +16,7 @@ fun Modifier.liquidGlass(
     curve: Float = 0.08f,
     dispersion: Float = 0.05f,
     edge: Float = 2f,
-    normalizedRadius: Float = 0.5f // 0.5f = píldora completamente redondeada
+    normalizedRadius: Float = 0.5f
 ) = this.graphicsLayer {
     if (Build.VERSION.SDK_INT >= 31 && size.width > 0f) {
         val blurEffect = android.graphics.RenderEffect.createBlurEffect(
@@ -41,7 +41,7 @@ fun Modifier.liquidGlass(
             val minDimension = minOf(size.width, size.height)
             shader.setFloatUniform("edge", edge / minDimension)
             shader.setColorUniform("tint", android.graphics.Color.argb(0, 0, 0, 0))
-            shader.setFloatUniform("saturation", 1.0f) // El ColorMatrix de arriba ya hace el trabajo
+            shader.setFloatUniform("saturation", 1.0f)
             shader.setFloatUniform("dispersion", dispersion)
             shader.setFloatUniform("contrast", 1.0f)
 
