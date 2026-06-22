@@ -1,4 +1,4 @@
-package com.pdm0126.outfit.ui.theme
+package com.pdm0126.outfix.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

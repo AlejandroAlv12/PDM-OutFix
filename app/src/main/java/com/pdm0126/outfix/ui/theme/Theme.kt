@@ -1,4 +1,4 @@
-package com.pdm0126.outfit.ui.theme
+package com.pdm0126.outfix.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -30,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun OutfitTheme(
+fun OutFixTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit

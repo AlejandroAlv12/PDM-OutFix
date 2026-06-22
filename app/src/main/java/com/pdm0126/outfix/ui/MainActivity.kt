@@ -1,4 +1,4 @@
-package com.pdm0126.outfit.ui
+package com.pdm0126.outfix.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,14 +11,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.pdm0126.outfit.ui.theme.OutfitTheme
+import com.pdm0126.outfix.ui.theme.OutFixTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            OutfitTheme(darkTheme = true) {
+            OutFixTheme(darkTheme = true) {
                 MainScreen()
             }
         }
@@ -36,7 +36,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    OutfitTheme {
+    OutFixTheme {
         Greeting("Android")
     }
 }

@@ -1,4 +1,4 @@
-package com.pdm0126.outfit
+package com.pdm0126.outfix
 
 import org.junit.Test
 

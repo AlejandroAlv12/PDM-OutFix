@@ -1,4 +1,4 @@
-package com.pdm0126.outfit.ui
+package com.pdm0126.outfix.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -29,17 +29,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import com.pdm0126.outfit.ui.theme.GlassWhite
-import com.pdm0126.outfit.ui.theme.LimeGreen
+import com.pdm0126.outfix.ui.theme.GlassWhite
+import com.pdm0126.outfix.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
 import android.os.Build
 import androidx.compose.ui.graphics.asComposeRenderEffect
-import com.pdm0126.outfit.screens.home.HomeScreen
-import com.pdm0126.outfit.screens.editor.OutfitEditorScreen
-import com.pdm0126.outfit.screens.planner.WeeklyPlannerScreen
-import com.pdm0126.outfit.screens.closet.ClosetScreen
-import com.pdm0126.outfit.screens.profile.ProfileScreen
+import com.pdm0126.outfix.screens.home.HomeScreen
+import com.pdm0126.outfix.screens.editor.OutfitEditorScreen
+import com.pdm0126.outfix.screens.planner.WeeklyPlannerScreen
+import com.pdm0126.outfix.screens.closet.ClosetScreen
+import com.pdm0126.outfix.screens.profile.ProfileScreen
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
@@ -154,24 +154,7 @@ fun FloatingBottomNavBar(
     var glassOffset by remember { mutableStateOf(Offset.Zero) }
     var glassSize by remember { mutableStateOf(Size.Zero) }
 
-    val renderEffect = remember {
-        if (Build.VERSION.SDK_INT >= 31) {
-            val blurEffect = android.graphics.RenderEffect.createBlurEffect(
-                30f, 
-                30f,
-                android.graphics.Shader.TileMode.CLAMP
-            )
 
-            val colorMatrix = android.graphics.ColorMatrix().apply {
-                setSaturation(1.2f)
-            }
-            val colorEffect = android.graphics.RenderEffect.createColorFilterEffect(
-                android.graphics.ColorMatrixColorFilter(colorMatrix)
-            )
-
-            android.graphics.RenderEffect.createChainEffect(colorEffect, blurEffect).asComposeRenderEffect()
-        } else null
-    }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -196,10 +179,13 @@ fun FloatingBottomNavBar(
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(36.dp))
-                        .graphicsLayer {
-                            this.renderEffect = renderEffect
-                        }
+                        .liquidGlass(
+                            blur = 5f,
+                            saturation = 1.2f,
+                            refraction = 0.55f,
+                            curve = 0.50f,
+                            dispersion = 0.0f
+                        )
                 ) {
                     translate(left = -glassOffset.x, top = -glassOffset.y) {
                         drawLayer(backgroundLayer)

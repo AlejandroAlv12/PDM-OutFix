@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.pdm0126.outfit"
+    namespace = "com.pdm0126.outfix"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.pdm0126.outfit"
+        applicationId = "com.pdm0126.outfix"
         minSdk = 33
         targetSdk = 37
         versionCode = 1

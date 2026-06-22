@@ -1,4 +1,4 @@
-package com.pdm0126.outfit.screens.home
+package com.pdm0126.outfix.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pdm0126.outfit.ui.theme.LimeGreen
+import com.pdm0126.outfix.ui.theme.LimeGreen
 
 @Composable
 fun HomeScreen() {

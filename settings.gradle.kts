@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Outfit"
+rootProject.name = "OutFix"
 include(":app")
