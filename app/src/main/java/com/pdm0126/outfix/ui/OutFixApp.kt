@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -144,6 +145,58 @@ fun MainScreen() {
                     onItemSelected = { screen ->
                         navigator.navigate(screen)
                     }
+                )
+            }
+
+            var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
+            var showScanner by remember { mutableStateOf(false) }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 28.dp, bottom = innerPadding.calculateBottomPadding() + 110.dp)
+                    .size(72.dp)
+                    .onGloballyPositioned { coords ->
+                        if (pagerCoords != null) {
+                            fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
+                        }
+                    }
+                    .clip(CircleShape)
+                    .clickable { showScanner = true },
+                contentAlignment = Alignment.Center
+            ) {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier.fillMaxSize().liquidGlass(
+                            blur = 12f,
+                            saturation = 1.2f,
+                            refraction = 0.5f,
+                            curve = 0.5f,
+                            dispersion = 0.15f,
+                            normalizedRadius = 0.5f
+                        )
+                    ) {
+                        translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
+                            drawLayer(backgroundLayer)
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
+                }
+
+                Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
+                
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = "Scan Garment",
+                    tint = Color.White,
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+
+            if (showScanner) {
+                com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
+                    onClose = { showScanner = false }
                 )
             }
         }
