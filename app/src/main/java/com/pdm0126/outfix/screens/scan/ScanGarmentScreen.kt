@@ -66,6 +66,7 @@ import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
@@ -169,6 +170,7 @@ class ObjectTrackingAnalyzer(
 @Composable
 fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, List<androidx.compose.ui.graphics.Color>) -> Unit) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val permissionsToRequest = remember {
         mutableListOf(Manifest.permission.CAMERA).apply {
@@ -197,7 +199,6 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     var zoomRatio by remember { mutableStateOf(1.0f) }
     var isFlashEnabled by remember { mutableStateOf(false) }
     
-    // Tracking State
     var trackingData by remember { mutableStateOf<TrackingData?>(null) }
     val imageCapture = remember { ImageCapture.Builder().build() }
 
@@ -217,6 +218,59 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
+            if (uri != null) {
+                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+                            android.graphics.ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                                decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+                                decoder.isMutableRequired = true
+                            }
+                        } else {
+                            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                        }
+
+                        var finalBitmap = bitmap
+                        val maxSize = 1500
+                        if (finalBitmap.width > maxSize || finalBitmap.height > maxSize) {
+                            val scale = maxSize.toFloat() / Math.max(finalBitmap.width, finalBitmap.height)
+                            finalBitmap = Bitmap.createScaledBitmap(finalBitmap, (finalBitmap.width * scale).toInt(), (finalBitmap.height * scale).toInt(), true)
+                        }
+
+                        val copyBitmap = finalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                        val segmenterOptions = SubjectSegmenterOptions.Builder().enableForegroundBitmap().build()
+                        val segmenter = SubjectSegmentation.getClient(segmenterOptions)
+
+                        segmenter.process(InputImage.fromBitmap(copyBitmap, 0))
+                            .addOnSuccessListener { result ->
+                                val fgBitmap = result.foregroundBitmap
+                                val file = File(context.cacheDir, "gallery_garment_${System.currentTimeMillis()}.png")
+                                val out = FileOutputStream(file)
+                                if (fgBitmap != null) {
+                                    val straightBitmap = straightenBitmap(fgBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                } else {
+                                    val straightBitmap = straightenBitmap(copyBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                }
+                            }
+                            .addOnFailureListener {
+                                val file = File(context.cacheDir, "gallery_garment_${System.currentTimeMillis()}.png")
+                                val out = FileOutputStream(file)
+                                copyBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                out.close()
+                                processCapturedImageData(copyBitmap, file.absolutePath, onImageCaptured)
+                            }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         }
     )
 
