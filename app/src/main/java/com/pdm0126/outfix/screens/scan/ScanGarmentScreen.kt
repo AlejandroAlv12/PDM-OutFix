@@ -17,9 +17,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -401,16 +413,16 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                     .fillMaxSize()
                     .padding(top = 24.dp, bottom = 40.dp)
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 12.dp)
+                        .zIndex(10f)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
+                            .align(Alignment.CenterStart)
                             .clip(CircleShape)
                             .background(Color(0xFFBDBDBD))
                             .clickable { onClose() },
@@ -428,48 +440,50 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         text = "Escanear",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color.Black,
+                        modifier = Modifier.align(Alignment.Center)
                     )
 
                     var showInfo by remember { mutableStateOf(false) }
-                    val infoCornerRadius by androidx.compose.animation.core.animateDpAsState(
+                    val cornerRadius by animateDpAsState(
                         targetValue = if (showInfo) 24.dp else 20.dp,
-                        animationSpec = androidx.compose.animation.core.spring(
+                        animationSpec = spring(
                             dampingRatio = 0.65f,
                             stiffness = 200f
                         ),
-                        label = "infoCornerRadius"
+                        label = "cornerRadius"
                     )
-                    val infoBgColor by androidx.compose.animation.animateColorAsState(
+                    val bgColor by animateColorAsState(
                         targetValue = if (showInfo) Color.White else Color(0xFFBDBDBD),
-                        animationSpec = androidx.compose.animation.core.tween(300),
-                        label = "infoBgColor"
+                        animationSpec = tween(300),
+                        label = "bgColor"
                     )
-                    val infoElevation by androidx.compose.animation.core.animateDpAsState(
+                    val elevation by animateDpAsState(
                         targetValue = if (showInfo) 16.dp else 0.dp,
-                        animationSpec = androidx.compose.animation.core.tween(300),
-                        label = "infoElevation"
+                        animationSpec = tween(300),
+                        label = "elevation"
                     )
 
                     Box(
                         modifier = Modifier
+                            .align(Alignment.CenterEnd)
                             .widthIn(min = 40.dp, max = 280.dp)
                             .shadow(
-                                elevation = infoElevation, 
-                                shape = RoundedCornerShape(infoCornerRadius),
+                                elevation = elevation, 
+                                shape = RoundedCornerShape(cornerRadius),
                                 spotColor = Color.Black.copy(alpha = 0.2f),
                                 ambientColor = Color.Black.copy(alpha = 0.1f)
                             )
-                            .clip(RoundedCornerShape(infoCornerRadius))
-                            .background(infoBgColor)
+                            .clip(RoundedCornerShape(cornerRadius))
+                            .background(bgColor)
                             .animateContentSize(
-                                animationSpec = androidx.compose.animation.core.spring(
+                                animationSpec = spring(
                                     dampingRatio = 0.65f,
                                     stiffness = 200f
                                 )
                             )
                             .clickable(
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { showInfo = !showInfo }
                     ) {
@@ -479,8 +493,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         ) {
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = !showInfo,
-                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200)),
-                                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+                                enter = fadeIn(animationSpec = tween(200)),
+                                exit = fadeOut(animationSpec = tween(150))
                             ) {
                                 Text(
                                     text = "i",
@@ -494,8 +508,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
 
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = showInfo,
-                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 150)),
-                                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+                                enter = fadeIn(animationSpec = tween(300, delayMillis = 150)),
+                                exit = fadeOut(animationSpec = tween(150))
                             ) {
                                 Column(
                                     modifier = Modifier.padding(20.dp)
