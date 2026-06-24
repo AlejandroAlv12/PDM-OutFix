@@ -17,9 +17,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -403,16 +415,16 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                     .fillMaxSize()
                     .padding(top = 24.dp, bottom = 40.dp)
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 12.dp)
+                        .zIndex(10f)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
+                            .align(Alignment.CenterStart)
                             .clip(CircleShape)
                             .background(Color(0xFFBDBDBD))
                             .clickable { onClose() },
@@ -430,24 +442,116 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         text = "Escanear",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color.Black,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+
+                    var showInfo by remember { mutableStateOf(false) }
+                    val cornerRadius by animateDpAsState(
+                        targetValue = if (showInfo) 24.dp else 20.dp,
+                        animationSpec = spring(
+                            dampingRatio = 0.65f,
+                            stiffness = 200f
+                        ),
+                        label = "cornerRadius"
+                    )
+                    val bgColor by animateColorAsState(
+                        targetValue = if (showInfo) Color.White else Color(0xFFBDBDBD),
+                        animationSpec = tween(300),
+                        label = "bgColor"
+                    )
+                    val elevation by animateDpAsState(
+                        targetValue = if (showInfo) 16.dp else 0.dp,
+                        animationSpec = tween(300),
+                        label = "elevation"
                     )
 
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFBDBDBD)),
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.CenterEnd)
+                            .widthIn(min = 40.dp, max = 280.dp)
+                            .shadow(
+                                elevation = elevation, 
+                                shape = RoundedCornerShape(cornerRadius),
+                                spotColor = Color.Black.copy(alpha = 0.2f),
+                                ambientColor = Color.Black.copy(alpha = 0.1f)
+                            )
+                            .clip(RoundedCornerShape(cornerRadius))
+                            .background(bgColor)
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = 0.65f,
+                                    stiffness = 200f
+                                )
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { showInfo = !showInfo }
                     ) {
-                        Text(
-                            text = "i",
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+                        ) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !showInfo,
+                                enter = fadeIn(animationSpec = tween(200)),
+                                exit = fadeOut(animationSpec = tween(150))
+                            ) {
+                                Text(
+                                    text = "i",
+                                    color = Color.White,
+                                    fontSize = 22.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = showInfo,
+                                enter = fadeIn(animationSpec = tween(300, delayMillis = 150)),
+                                exit = fadeOut(animationSpec = tween(150))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(bottom = 12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFE3F2FD)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Info,
+                                                contentDescription = null,
+                                                tint = Color(0xFF2196F3),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Recomendaciones",
+                                            color = Color.Black,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    Text(
+                                        text = "Recuerda limpiar el sensor de la cámara y contar con buena iluminación con un fondo sin texturas de preferencia para un resultado satisfactorio.",
+                                        color = Color.DarkGray,
+                                        fontSize = 14.sp,
+                                        lineHeight = 22.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
