@@ -48,6 +48,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.animation.animateContentSize
@@ -425,9 +426,15 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         color = Color.Transparent
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            val blurRadius by animateDpAsState(
+                targetValue = if (isProcessing) 16.dp else 0.dp,
+                animationSpec = tween(300),
+                label = "blurRadius"
+            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .blur(blurRadius)
                     .padding(top = 24.dp, bottom = 40.dp)
             ) {
                 Box(
@@ -761,7 +768,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White.copy(alpha = 0.85f))
+                        .background(Color.White.copy(alpha = 0.4f))
                         .pointerInput(Unit) {},
                     contentAlignment = Alignment.Center
                 ) {
@@ -876,6 +883,7 @@ fun CameraPreviewView(
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
                     this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                    this.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                 }
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
