@@ -102,6 +102,11 @@ fun MainScreen() {
     val backgroundLayer = rememberGraphicsLayer()
     var pagerCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(pagerState.currentPage) {
+        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFEDDDCC)
@@ -214,7 +219,12 @@ fun MainScreen() {
                     .clickable(
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                         indication = null
-                    ) { if (!isFabExpanded) showScanner = true },
+                    ) { 
+                        if (!isFabExpanded) {
+                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            showScanner = true 
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(

@@ -214,6 +214,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     var isFlashEnabled by remember { mutableStateOf(false) }
     
     var trackingData by remember { mutableStateOf<TrackingData?>(null) }
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(trackingData != null) {
+        if (trackingData != null) {
+            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        }
+    }
+    
+    var isProcessing by remember { mutableStateOf(false) }
+    val handleImageCaptured = { path: String, category: String, colors: List<androidx.compose.ui.graphics.Color> ->
+        isProcessing = false
+        onImageCaptured(path, category, colors)
+    }
+
     val imageCapture = remember { ImageCapture.Builder().build() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -233,6 +246,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             if (uri != null) {
+                isProcessing = true
                 coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -265,12 +279,12 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(copyBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
@@ -278,10 +292,11 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 val out = FileOutputStream(file)
                                 copyBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(copyBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(copyBitmap, file.absolutePath, handleImageCaptured)
                             }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        isProcessing = false
                     }
                 }
             }
@@ -300,9 +315,9 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         }
     }
 
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     val captureImage = {
+        isProcessing = true
         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
         val file = File(context.cacheDir, "cropped_garment.png")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
@@ -354,19 +369,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(croppedBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
                                 val out = FileOutputStream(file)
                                 croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(croppedBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(croppedBitmap, file.absolutePath, handleImageCaptured)
                             }
                     } else {
                         val segmenterOptions = SubjectSegmenterOptions.Builder().enableForegroundBitmap().build()
@@ -380,25 +395,26 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(uprightBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
                                 val out = FileOutputStream(file)
                                 uprightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(uprightBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(uprightBitmap, file.absolutePath, handleImageCaptured)
                             }
                     }
                 }
 
                 override fun onError(exc: ImageCaptureException) {
                     Log.e("ScanGarmentScreen", "Error al capturar la foto", exc)
+                    isProcessing = false
                 }
             }
         )
@@ -408,6 +424,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         modifier = Modifier.fillMaxSize(),
         color = Color.Transparent
     ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -516,27 +533,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         modifier = Modifier.padding(bottom = 12.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFFE3F2FD)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Info,
-                                                contentDescription = null,
-                                                tint = Color(0xFF2196F3),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Icon(
+                                            imageVector = Icons.Rounded.Info,
+                                            contentDescription = null,
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                         Text(
-                                            text = "Recomendaciones",
+                                            text = "Consejo para escanear",
                                             color = Color.Black,
-                                            fontWeight = FontWeight.ExtraBold,
+                                            fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp
                                         )
                                     }
@@ -602,11 +611,12 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                         fontSize = 14.sp
                                     )
                                 }
-
-
                             } else {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("Se requiere permiso de cámara para escanear", color = Color.Gray, fontWeight = FontWeight.Medium)
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No hay acceso a la cámara", color = Color.Gray, fontWeight = FontWeight.Medium)
                                 }
                             }
                             
@@ -741,9 +751,45 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                     }
                 }
             }
+            
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isProcessing,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = 0.85f))
+                        .pointerInput(Unit) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            color = Color(0xFFC7E054),
+                            strokeWidth = 6.dp
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "Analizando prendas...",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Extrayendo silueta y colores",
+                            fontSize = 14.sp,
+                            color = Color.DarkGray
+                        )
+                    }
+                }
+            }
         }
     }
-
+}
 
 @Composable
 fun ViewfinderCorners(modifier: Modifier = Modifier) {
