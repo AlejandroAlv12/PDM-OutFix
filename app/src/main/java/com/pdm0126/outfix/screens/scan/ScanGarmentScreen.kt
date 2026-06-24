@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -390,14 +392,10 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         )
     }
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color(0xFFF5F5F5)
-        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -433,21 +431,111 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         color = Color.Black
                     )
 
+                    var showInfo by remember { mutableStateOf(false) }
+                    val infoCornerRadius by androidx.compose.animation.core.animateDpAsState(
+                        targetValue = if (showInfo) 24.dp else 20.dp,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = 0.65f,
+                            stiffness = 200f
+                        ),
+                        label = "infoCornerRadius"
+                    )
+                    val infoBgColor by androidx.compose.animation.animateColorAsState(
+                        targetValue = if (showInfo) Color.White else Color(0xFFBDBDBD),
+                        animationSpec = androidx.compose.animation.core.tween(300),
+                        label = "infoBgColor"
+                    )
+                    val infoElevation by androidx.compose.animation.core.animateDpAsState(
+                        targetValue = if (showInfo) 16.dp else 0.dp,
+                        animationSpec = androidx.compose.animation.core.tween(300),
+                        label = "infoElevation"
+                    )
+
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFBDBDBD)),
-                        contentAlignment = Alignment.Center
+                            .widthIn(min = 40.dp, max = 280.dp)
+                            .shadow(
+                                elevation = infoElevation, 
+                                shape = RoundedCornerShape(infoCornerRadius),
+                                spotColor = Color.Black.copy(alpha = 0.2f),
+                                ambientColor = Color.Black.copy(alpha = 0.1f)
+                            )
+                            .clip(RoundedCornerShape(infoCornerRadius))
+                            .background(infoBgColor)
+                            .animateContentSize(
+                                animationSpec = androidx.compose.animation.core.spring(
+                                    dampingRatio = 0.65f,
+                                    stiffness = 200f
+                                )
+                            )
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null
+                            ) { showInfo = !showInfo }
                     ) {
-                        Text(
-                            text = "i",
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+                        ) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !showInfo,
+                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(200)),
+                                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+                            ) {
+                                Text(
+                                    text = "i",
+                                    color = Color.White,
+                                    fontSize = 22.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = showInfo,
+                                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300, delayMillis = 150)),
+                                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(bottom = 12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFE3F2FD)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Info,
+                                                contentDescription = null,
+                                                tint = Color(0xFF2196F3),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Recomendaciones",
+                                            color = Color.Black,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    Text(
+                                        text = "Recuerda limpiar el sensor de la cámara y contar con buena iluminación con un fondo sin texturas de preferencia para un resultado satisfactorio.",
+                                        color = Color.DarkGray,
+                                        fontSize = 14.sp,
+                                        lineHeight = 22.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -641,7 +729,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
             }
         }
     }
-}
+
 
 @Composable
 fun ViewfinderCorners(modifier: Modifier = Modifier) {

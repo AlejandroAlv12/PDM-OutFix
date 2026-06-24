@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.togetherWith
 import androidx.navigation3.runtime.NavKey
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
@@ -154,18 +155,57 @@ fun MainScreen() {
             var capturedCategory by remember { mutableStateOf("") }
             var capturedColors by remember { mutableStateOf<List<androidx.compose.ui.graphics.Color>>(emptyList()) }
 
+            val configuration = LocalConfiguration.current
+            val screenWidth = configuration.screenWidthDp.dp
+            val screenHeight = configuration.screenHeightDp.dp + 100.dp // Extra offset for safety with status bars
+
+            val isFabExpanded = showScanner || capturedImagePath != null
+
+            val fabWidth by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) screenWidth else 72.dp,
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabWidth"
+            )
+            val fabHeight by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) screenHeight else 72.dp,
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabHeight"
+            )
+            val fabPaddingEnd by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else 28.dp,
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabPaddingEnd"
+            )
+            val fabPaddingBottom by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else (innerPadding.calculateBottomPadding() + 110.dp),
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabPaddingBottom"
+            )
+            val fabCornerRadius by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else 36.dp,
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabCornerRadius"
+            )
+            val fabNormalizedRadius by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isFabExpanded) 0f else 0.5f,
+                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabNormalizedRadius"
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 28.dp, bottom = innerPadding.calculateBottomPadding() + 110.dp)
-                    .size(72.dp)
+                    .padding(end = fabPaddingEnd, bottom = fabPaddingBottom)
+                    .size(width = fabWidth, height = fabHeight)
                     .onGloballyPositioned { coords ->
                         if (pagerCoords != null) {
                             fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
                         }
                     }
-                    .clip(CircleShape)
-                    .clickable { showScanner = true },
+                    .clip(RoundedCornerShape(fabCornerRadius))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { if (!isFabExpanded) showScanner = true },
                 contentAlignment = Alignment.Center
             ) {
                 if (Build.VERSION.SDK_INT >= 31) {
@@ -176,7 +216,7 @@ fun MainScreen() {
                             refraction = 0.5f,
                             curve = 0.5f,
                             dispersion = 0.15f,
-                            normalizedRadius = 0.5f
+                            normalizedRadius = fabNormalizedRadius
                         )
                     ) {
                         translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
@@ -189,39 +229,91 @@ fun MainScreen() {
 
                 Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
                 
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = "Scan Garment",
-                    tint = Color.White,
-                    modifier = Modifier.size(50.dp)
+                val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isFabExpanded) 1f else 0f,
+                    animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    label = "bgOverlayAlpha"
                 )
-            }
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5).copy(alpha = bgOverlayAlpha)))
+                
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !isFabExpanded,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Scan Garment",
+                        tint = Color.White,
+                        modifier = Modifier.size(50.dp)
+                    )
+                }
 
-            if (showScanner) {
-                com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
-                    onClose = { showScanner = false },
-                    onImageCaptured = { imagePath, category, colors ->
-                        showScanner = false
-                        capturedImagePath = imagePath
-                        capturedCategory = category
-                        capturedColors = colors
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isFabExpanded,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, delayMillis = 100)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                ) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = capturedImagePath != null,
+                        transitionSpec = {
+                            if (targetState && !initialState) {
+                                (androidx.compose.animation.slideInHorizontally(
+                                    initialOffsetX = { it },
+                                    animationSpec = androidx.compose.animation.core.tween(400)
+                                ) + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally(
+                                        targetOffsetX = { -it },
+                                        animationSpec = androidx.compose.animation.core.tween(400)
+                                    ) + androidx.compose.animation.fadeOut()
+                                )
+                            } else if (!targetState && initialState) {
+                                (androidx.compose.animation.slideInHorizontally(
+                                    initialOffsetX = { -it },
+                                    animationSpec = androidx.compose.animation.core.tween(400)
+                                ) + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally(
+                                        targetOffsetX = { it },
+                                        animationSpec = androidx.compose.animation.core.tween(400)
+                                    ) + androidx.compose.animation.fadeOut()
+                                )
+                            } else {
+                                androidx.compose.animation.fadeIn().togetherWith(androidx.compose.animation.fadeOut())
+                            }
+                        },
+                        label = "ScanToNewTransition"
+                    ) { isNewGarment ->
+                        if (!isNewGarment) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
+                                    onClose = { showScanner = false },
+                                    onImageCaptured = { imagePath, category, colors ->
+                                        capturedImagePath = imagePath
+                                        capturedCategory = category
+                                        capturedColors = colors
+                                    }
+                                )
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                capturedImagePath?.let { imagePath ->
+                                    com.pdm0126.outfix.screens.scan.NewGarmentScreen(
+                                        imagePath = imagePath,
+                                        detectedCategory = capturedCategory,
+                                        detectedColors = capturedColors,
+                                        onBack = { 
+                                            capturedImagePath = null
+                                        },
+                                        onSave = {
+                                            capturedImagePath = null
+                                            showScanner = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
-                )
-            }
-
-            capturedImagePath?.let { imagePath ->
-                com.pdm0126.outfix.screens.scan.NewGarmentScreen(
-                    imagePath = imagePath,
-                    detectedCategory = capturedCategory,
-                    detectedColors = capturedColors,
-                    onBack = { 
-                        capturedImagePath = null
-                        showScanner = true
-                    },
-                    onSave = {
-                        capturedImagePath = null
-                    }
-                )
+                }
             }
         }
     }
