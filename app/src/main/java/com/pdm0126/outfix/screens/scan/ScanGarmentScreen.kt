@@ -60,6 +60,9 @@ import coil.compose.AsyncImage
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.google.mlkit.vision.objects.defaults.PredefinedCategory
+import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
+import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
@@ -119,7 +122,13 @@ class ObjectTrackingAnalyzer(
                 val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 objectDetector.process(image)
                     .addOnSuccessListener { detectedObjects ->
-                        val largestObject = detectedObjects.maxByOrNull {
+                        val fashionObjects = detectedObjects.filter { obj ->
+                            obj.labels.any { it.text == PredefinedCategory.FASHION_GOOD }
+                        }
+                        
+                        val targetObjects = if (fashionObjects.isNotEmpty()) fashionObjects else detectedObjects
+
+                        val largestObject = targetObjects.maxByOrNull {
                             it.boundingBox.width() * it.boundingBox.height()
                         }
                         
@@ -158,7 +167,7 @@ class ObjectTrackingAnalyzer(
 }
 
 @Composable
-fun ScanGarmentScreen(onClose: () -> Unit) {
+fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, List<androidx.compose.ui.graphics.Color>) -> Unit) {
     val context = LocalContext.current
 
     val permissionsToRequest = remember {
@@ -208,7 +217,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
-            // TODO: Procesar la imagen seleccionada de la galería
         }
     )
 
@@ -224,8 +232,11 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
         }
     }
 
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+
     val captureImage = {
-        val file = File(context.cacheDir, "cropped_garment.jpg")
+        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        val file = File(context.cacheDir, "cropped_garment.png")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
         imageCapture.takePicture(
@@ -250,22 +261,72 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                         val scaleX = uprightBitmap.width.toFloat() / currentData.sourceWidth
                         val scaleY = uprightBitmap.height.toFloat() / currentData.sourceHeight
 
-                        val cropX = (currentData.boundingBox.left * scaleX).toInt().coerceIn(0, uprightBitmap.width)
-                        val cropY = (currentData.boundingBox.top * scaleY).toInt().coerceIn(0, uprightBitmap.height)
-                        val cropW = (currentData.boundingBox.width() * scaleX).toInt().coerceIn(1, uprightBitmap.width - cropX)
-                        val cropH = (currentData.boundingBox.height() * scaleY).toInt().coerceIn(1, uprightBitmap.height - cropY)
+                        val padX = (currentData.boundingBox.width() * scaleX * 0.15f).toInt()
+                        val padY = (currentData.boundingBox.height() * scaleY * 0.15f).toInt()
+
+                        val cropX = ((currentData.boundingBox.left * scaleX).toInt() - padX).coerceAtLeast(0)
+                        val cropY = ((currentData.boundingBox.top * scaleY).toInt() - padY).coerceAtLeast(0)
+                        
+                        val rawW = (currentData.boundingBox.width() * scaleX).toInt() + (padX * 2)
+                        val rawH = (currentData.boundingBox.height() * scaleY).toInt() + (padY * 2)
+                        
+                        val cropW = rawW.coerceIn(1, uprightBitmap.width - cropX)
+                        val cropH = rawH.coerceIn(1, uprightBitmap.height - cropY)
 
                         val croppedBitmap = Bitmap.createBitmap(uprightBitmap, cropX, cropY, cropW, cropH)
-                        val out = FileOutputStream(file)
-                        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-                        out.close()
+                        
+                        val segmenterOptions = SubjectSegmenterOptions.Builder().enableForegroundBitmap().build()
+                        val segmenter = SubjectSegmentation.getClient(segmenterOptions)
+                        
+                        segmenter.process(InputImage.fromBitmap(croppedBitmap, 0))
+                            .addOnSuccessListener { result ->
+                                val fgBitmap = result.foregroundBitmap
+                                val out = FileOutputStream(file)
+                                if (fgBitmap != null) {
+                                    val straightBitmap = straightenBitmap(fgBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                } else {
+                                    val straightBitmap = straightenBitmap(croppedBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                }
+                            }
+                            .addOnFailureListener {
+                                val out = FileOutputStream(file)
+                                croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                out.close()
+                                processCapturedImageData(croppedBitmap, file.absolutePath, onImageCaptured)
+                            }
                     } else {
-                        val out = FileOutputStream(file)
-                        uprightBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-                        out.close()
+                        val segmenterOptions = SubjectSegmenterOptions.Builder().enableForegroundBitmap().build()
+                        val segmenter = SubjectSegmentation.getClient(segmenterOptions)
+                        
+                        segmenter.process(InputImage.fromBitmap(uprightBitmap, 0))
+                            .addOnSuccessListener { result ->
+                                val fgBitmap = result.foregroundBitmap
+                                val out = FileOutputStream(file)
+                                if (fgBitmap != null) {
+                                    val straightBitmap = straightenBitmap(fgBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                } else {
+                                    val straightBitmap = straightenBitmap(uprightBitmap)
+                                    straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                    out.close()
+                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                }
+                            }
+                            .addOnFailureListener {
+                                val out = FileOutputStream(file)
+                                uprightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                out.close()
+                                processCapturedImageData(uprightBitmap, file.absolutePath, onImageCaptured)
+                            }
                     }
-                    
-                    // TODO: Navigate to Specification Screen passing file.absolutePath
                 }
 
                 override fun onError(exc: ImageCaptureException) {
@@ -288,7 +349,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                     .fillMaxSize()
                     .padding(top = 24.dp, bottom = 40.dp)
             ) {
-                // App Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -339,7 +399,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
 
                 HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 1.dp, color = Color(0xFFE5E5E5))
 
-                // Main Content area
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -348,7 +407,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Camera Viewfinder Area
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -356,7 +414,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                     ) {
                         var previewSize by remember { mutableStateOf(IntSize.Zero) }
 
-                        // Inner Area
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -397,7 +454,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                                 }
                             }
                             
-                            // Corners overlay calculated dynamically
                             if (previewSize.width > 0 && previewSize.height > 0) {
                                 val density = LocalDensity.current
                                 
@@ -452,7 +508,7 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                                 visible = trackingData == null,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = 12.dp)
+                                    .padding(bottom = 8.dp)
                             ) {
                                 Text(
                                     text = "Colocar prenda dentro del recuadro",
@@ -480,13 +536,11 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(40.dp))
 
-                    // Bottom Controls
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Gallery Thumbnail
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
@@ -504,7 +558,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                             }
                         }
 
-                        // Capture Button
                         Box(
                             modifier = Modifier
                                 .size(80.dp)
@@ -515,7 +568,6 @@ fun ScanGarmentScreen(onClose: () -> Unit) {
                                 .clickable { captureImage() }
                         )
 
-                        // Flash Button
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
@@ -659,4 +711,169 @@ fun CameraPreviewView(
             modifier = Modifier.fillMaxSize()
         )
     }
+}
+
+fun straightenBitmap(bitmap: Bitmap): Bitmap {
+    val scale = 150f / Math.max(bitmap.width, bitmap.height).toFloat()
+    val smallW = Math.max(1, (bitmap.width * scale).toInt())
+    val smallH = Math.max(1, (bitmap.height * scale).toInt())
+    val smallBitmap = Bitmap.createScaledBitmap(bitmap, smallW, smallH, true)
+
+    var m00 = 0.0
+    var m10 = 0.0
+    var m01 = 0.0
+
+    val pixels = IntArray(smallW * smallH)
+    smallBitmap.getPixels(pixels, 0, smallW, 0, 0, smallW, smallH)
+
+    for (y in 0 until smallH) {
+        for (x in 0 until smallW) {
+            val alpha = android.graphics.Color.alpha(pixels[y * smallW + x])
+            if (alpha > 50) {
+                m00 += alpha
+                m10 += alpha * x
+                m01 += alpha * y
+            }
+        }
+    }
+
+    if (m00 == 0.0) return bitmap
+
+    val cx = m10 / m00
+    val cy = m01 / m00
+
+    var mu20 = 0.0
+    var mu02 = 0.0
+    var mu11 = 0.0
+
+    for (y in 0 until smallH) {
+        for (x in 0 until smallW) {
+            val alpha = android.graphics.Color.alpha(pixels[y * smallW + x])
+            if (alpha > 50) {
+                val dx = x - cx
+                val dy = y - cy
+                mu20 += alpha * dx * dx
+                mu02 += alpha * dy * dy
+                mu11 += alpha * dx * dy
+            }
+        }
+    }
+
+    val theta = 0.5 * Math.atan2(2 * mu11, mu20 - mu02)
+    val angleDeg = Math.toDegrees(theta)
+
+    val rotationAngle = if (Math.abs(angleDeg) < 45.0) {
+        -angleDeg.toFloat()
+    } else {
+        if (angleDeg > 0) (90.0 - angleDeg).toFloat() else (-90.0 - angleDeg).toFloat()
+    }
+
+    val matrix = android.graphics.Matrix()
+    matrix.postRotate(rotationAngle)
+    
+    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+    return cropTransparentBounds(rotatedBitmap)
+}
+
+fun cropTransparentBounds(bitmap: Bitmap): Bitmap {
+    val scale = 200f / Math.max(bitmap.width, bitmap.height).toFloat()
+    val smallW = Math.max(1, (bitmap.width * scale).toInt())
+    val smallH = Math.max(1, (bitmap.height * scale).toInt())
+    val smallBitmap = Bitmap.createScaledBitmap(bitmap, smallW, smallH, true)
+
+    var minX = smallW
+    var minY = smallH
+    var maxX = 0
+    var maxY = 0
+
+    val pixels = IntArray(smallW * smallH)
+    smallBitmap.getPixels(pixels, 0, smallW, 0, 0, smallW, smallH)
+
+    for (y in 0 until smallH) {
+        for (x in 0 until smallW) {
+            if (android.graphics.Color.alpha(pixels[y * smallW + x]) > 10) {
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+        }
+    }
+
+    if (minX > maxX || minY > maxY) return bitmap
+
+    val padSmall = 5
+    minX = Math.max(0, minX - padSmall)
+    minY = Math.max(0, minY - padSmall)
+    maxX = Math.min(smallW - 1, maxX + padSmall)
+    maxY = Math.min(smallH - 1, maxY + padSmall)
+
+    val actualMinX = (minX / scale).toInt().coerceIn(0, bitmap.width - 1)
+    val actualMinY = (minY / scale).toInt().coerceIn(0, bitmap.height - 1)
+    val actualMaxX = (maxX / scale).toInt().coerceIn(0, bitmap.width - 1)
+    val actualMaxY = (maxY / scale).toInt().coerceIn(0, bitmap.height - 1)
+    
+    val width = actualMaxX - actualMinX + 1
+    val height = actualMaxY - actualMinY + 1
+
+    return Bitmap.createBitmap(bitmap, actualMinX, actualMinY, width, height)
+}
+
+fun processCapturedImageData(
+    bitmap: Bitmap,
+    filePath: String,
+    onComplete: (String, String, List<androidx.compose.ui.graphics.Color>) -> Unit
+) {
+    val extractedColors = mutableListOf<androidx.compose.ui.graphics.Color>()
+    val palette = androidx.palette.graphics.Palette.from(bitmap).generate()
+    
+    val swatches = listOfNotNull(
+        palette.vibrantSwatch,
+        palette.dominantSwatch,
+        palette.lightVibrantSwatch,
+        palette.darkVibrantSwatch,
+        palette.mutedSwatch
+    )
+    
+    for (swatch in swatches) {
+        val color = androidx.compose.ui.graphics.Color(swatch.rgb)
+        if (!extractedColors.contains(color) && extractedColors.size < 3) {
+            extractedColors.add(color)
+        }
+    }
+    
+    if (extractedColors.isEmpty()) {
+        extractedColors.add(androidx.compose.ui.graphics.Color.Gray)
+    }
+
+    val labeler = com.google.mlkit.vision.label.ImageLabeling.getClient(
+        com.google.mlkit.vision.label.defaults.ImageLabelerOptions.DEFAULT_OPTIONS
+    )
+    val image = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
+    
+    labeler.process(image)
+        .addOnSuccessListener { labels ->
+            var category = "Desconocido"
+            val foundLabels = labels.map { it.text.lowercase() }
+            
+            if (foundLabels.any { it in listOf("hat", "cap", "beanie", "fedora", "sombrero") }) {
+                category = "Cabeza"
+            } else if (foundLabels.any { it in listOf("shoe", "footwear", "sneaker", "boot") }) {
+                category = "Calzado"
+            } else if (foundLabels.any { it in listOf("shirt", "t-shirt", "top", "blouse", "sweater", "jacket") }) {
+                category = "Camisa"
+            } else if (foundLabels.any { it in listOf("pants", "trousers", "jeans", "shorts", "skirt") }) {
+                category = "Pantalón"
+            } else if (foundLabels.any { it in listOf("dress") }) {
+                category = "Vestido"
+            } else if (foundLabels.any { it in listOf("bag", "handbag", "backpack") }) {
+                category = "Bolso"
+            }
+            
+            onComplete(filePath, category, extractedColors)
+        }
+        .addOnFailureListener {
+            onComplete(filePath, "Desconocido", extractedColors)
+        }
 }

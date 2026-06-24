@@ -150,6 +150,9 @@ fun MainScreen() {
 
             var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
             var showScanner by remember { mutableStateOf(false) }
+            var capturedImagePath by remember { mutableStateOf<String?>(null) }
+            var capturedCategory by remember { mutableStateOf("") }
+            var capturedColors by remember { mutableStateOf<List<androidx.compose.ui.graphics.Color>>(emptyList()) }
 
             Box(
                 modifier = Modifier
@@ -196,7 +199,28 @@ fun MainScreen() {
 
             if (showScanner) {
                 com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
-                    onClose = { showScanner = false }
+                    onClose = { showScanner = false },
+                    onImageCaptured = { imagePath, category, colors ->
+                        showScanner = false
+                        capturedImagePath = imagePath
+                        capturedCategory = category
+                        capturedColors = colors
+                    }
+                )
+            }
+
+            capturedImagePath?.let { imagePath ->
+                com.pdm0126.outfix.screens.scan.NewGarmentScreen(
+                    imagePath = imagePath,
+                    detectedCategory = capturedCategory,
+                    detectedColors = capturedColors,
+                    onBack = { 
+                        capturedImagePath = null
+                        showScanner = true
+                    },
+                    onSave = {
+                        capturedImagePath = null
+                    }
                 )
             }
         }
