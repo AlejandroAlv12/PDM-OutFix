@@ -157,38 +157,47 @@ fun MainScreen() {
 
             val configuration = LocalConfiguration.current
             val screenWidth = configuration.screenWidthDp.dp
-            val screenHeight = configuration.screenHeightDp.dp + 100.dp // Extra offset for safety with status bars
+            val screenHeight = configuration.screenHeightDp.dp + 100.dp
 
             val isFabExpanded = showScanner || capturedImagePath != null
 
+            androidx.activity.compose.BackHandler(enabled = isFabExpanded) {
+                if (capturedImagePath != null) {
+                    capturedImagePath = null
+                    showScanner = true
+                } else if (showScanner) {
+                    showScanner = false
+                }
+            }
+
             val fabWidth by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (isFabExpanded) screenWidth else 72.dp,
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabWidth"
             )
             val fabHeight by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (isFabExpanded) screenHeight else 72.dp,
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabHeight"
             )
             val fabPaddingEnd by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (isFabExpanded) 0.dp else 28.dp,
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabPaddingEnd"
             )
             val fabPaddingBottom by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (isFabExpanded) 0.dp else (innerPadding.calculateBottomPadding() + 110.dp),
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabPaddingBottom"
             )
             val fabCornerRadius by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (isFabExpanded) 0.dp else 36.dp,
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabCornerRadius"
             )
             val fabNormalizedRadius by androidx.compose.animation.core.animateFloatAsState(
                 targetValue = if (isFabExpanded) 0f else 0.5f,
-                animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabNormalizedRadius"
             )
             Box(
@@ -208,32 +217,39 @@ fun MainScreen() {
                     ) { if (!isFabExpanded) showScanner = true },
                 contentAlignment = Alignment.Center
             ) {
-                if (Build.VERSION.SDK_INT >= 31) {
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier.fillMaxSize().liquidGlass(
-                            blur = 12f,
-                            saturation = 1.2f,
-                            refraction = 0.5f,
-                            curve = 0.5f,
-                            dispersion = 0.15f,
-                            normalizedRadius = fabNormalizedRadius
-                        )
-                    ) {
-                        translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
-                            drawLayer(backgroundLayer)
-                        }
-                    }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
-                }
-
-                Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
-                
                 val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(
                     targetValue = if (isFabExpanded) 1f else 0f,
-                    animationSpec = androidx.compose.animation.core.tween(400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    animationSpec = if (isFabExpanded) {
+                        androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearEasing)
+                    } else {
+                        androidx.compose.animation.core.tween(150, delayMillis = 350, easing = androidx.compose.animation.core.LinearEasing)
+                    },
                     label = "bgOverlayAlpha"
                 )
+
+                if (bgOverlayAlpha < 0.99f) {
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        androidx.compose.foundation.Canvas(
+                            modifier = Modifier.fillMaxSize().liquidGlass(
+                                blur = 12f,
+                                saturation = 1.2f,
+                                refraction = 0.5f,
+                                curve = 0.5f,
+                                dispersion = 0.15f,
+                                normalizedRadius = fabNormalizedRadius
+                            )
+                        ) {
+                            translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
+                                drawLayer(backgroundLayer)
+                            }
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
+                    }
+
+                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
+                }
+                
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5).copy(alpha = bgOverlayAlpha)))
                 
                 androidx.compose.animation.AnimatedVisibility(
