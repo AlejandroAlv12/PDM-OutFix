@@ -12,6 +12,9 @@ object Garments : UUIDTable("garments") {
     val category = varchar("category", 30)       // TOP, BOTTOM, FOOTWEAR, ACCESSORY, OUTERWEAR
     val colorHex = varchar("color_hex", 10).nullable()   // Ej: "#FF5733"
     val colorName = varchar("color_name", 50).nullable() // Ej: "Rojo"
+    val style = varchar("style", 50).nullable()
+    val brand = varchar("brand", 50).nullable()
+    val size = varchar("size", 20).nullable()
     val status = varchar("status", 20).default("AVAILABLE") // AVAILABLE, DIRTY, LOANED
     val imageUrl = varchar("image_url", 500).nullable()
     val notes = text("notes").nullable()

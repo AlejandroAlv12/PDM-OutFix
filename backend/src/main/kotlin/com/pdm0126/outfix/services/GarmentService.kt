@@ -20,6 +20,9 @@ object GarmentService {
                 it[category] = request.category
                 it[colorHex] = request.colorHex
                 it[colorName] = request.colorName
+                it[style] = request.style
+                it[brand] = request.brand
+                it[size] = request.size
                 it[status] = request.status
                 it[imageUrl] = request.imageUrl
                 it[notes] = request.notes
@@ -35,6 +38,9 @@ object GarmentService {
             category = request.category,
             colorHex = request.colorHex,
             colorName = request.colorName,
+            style = request.style,
+            brand = request.brand,
+            size = request.size,
             status = request.status,
             imageUrl = request.imageUrl,
             notes = request.notes,
@@ -67,6 +73,9 @@ object GarmentService {
                 request.category?.let { value -> it[category] = value }
                 request.colorHex?.let { value -> it[colorHex] = value }
                 request.colorName?.let { value -> it[colorName] = value }
+                request.style?.let { value -> it[style] = value }
+                request.brand?.let { value -> it[brand] = value }
+                request.size?.let { value -> it[size] = value }
                 request.status?.let { value -> it[status] = value }
                 request.imageUrl?.let { value -> it[imageUrl] = value }
                 request.notes?.let { value -> it[notes] = value }
@@ -92,6 +101,9 @@ object GarmentService {
         category = this[Garments.category],
         colorHex = this[Garments.colorHex],
         colorName = this[Garments.colorName],
+        style = this[Garments.style],
+        brand = this[Garments.brand],
+        size = this[Garments.size],
         status = this[Garments.status],
         imageUrl = this[Garments.imageUrl],
         notes = this[Garments.notes],

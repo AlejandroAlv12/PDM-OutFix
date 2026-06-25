@@ -78,6 +78,10 @@ fun NewGarmentScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+
     var title by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "") }
     var selectedCategory by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "Camisa") }
     var showCategoryMenu by remember { mutableStateOf(false) }
@@ -170,16 +174,49 @@ fun NewGarmentScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(LimeGreen.copy(alpha = 0.5f))
-                        .clickable { onSave() },
+                        .background(if (isSaving) Color.Gray else LimeGreen.copy(alpha = 0.5f))
+                        .clickable(enabled = !isSaving) { 
+                            coroutineScope.launch {
+                                isSaving = true
+                                try {
+                                    val sizeList = listOf("XS", "S", "M", "L", "XL")
+                                    val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.value.toInt())
+                                    val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
+                                        name = title.ifBlank { selectedCategory },
+                                        category = selectedCategory,
+                                        colorHex = hexColor,
+                                        style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
+                                        brand = marcaEj.ifBlank { null },
+                                        size = sizeList.getOrNull(selectedSizeIndex),
+                                        imageUrl = imagePath
+                                    )
+                                    val response = com.pdm0126.outfix.data.api.RetrofitClient.garmentApi.createGarment(request)
+                                    if (response.success) {
+                                        android.widget.Toast.makeText(context, "Prenda guardada con éxito", android.widget.Toast.LENGTH_SHORT).show()
+                                        onSave()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Error: ${response.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("NewGarmentScreen", "Error saving garment", e)
+                                    android.widget.Toast.makeText(context, "Error de red", android.widget.Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isSaving = false
+                                }
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = "Guardar",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    if (isSaving) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = "Guardar",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
 

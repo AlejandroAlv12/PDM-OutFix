@@ -59,6 +59,12 @@ dependencies {
     implementation(libs.mlkit.subject.segmentation)
     implementation(libs.mlkit.image.labeling)
     implementation(libs.androidx.palette.ktx)
+    
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

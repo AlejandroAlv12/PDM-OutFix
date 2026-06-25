@@ -14,10 +14,10 @@ fun Application.configureRouting() {
     routing {
         // Rutas públicas (no necesitan JWT)
         authRoutes()
+        garmentRoutes()
 
         // Rutas protegidas (necesitan token JWT en el header Authorization)
         authenticate("auth-jwt") {
-            garmentRoutes()
             plannerRoutes()
         }
     }

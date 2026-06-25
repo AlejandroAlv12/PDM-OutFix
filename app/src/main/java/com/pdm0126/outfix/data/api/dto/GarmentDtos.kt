@@ -1,13 +1,11 @@
-package com.pdm0126.outfix.models
+package com.pdm0126.outfix.data.api.dto
 
 import kotlinx.serialization.Serializable
-
-// --- Request DTOs ---
 
 @Serializable
 data class CreateGarmentRequest(
     val name: String,
-    val category: String,     // TOP, BOTTOM, FOOTWEAR, ACCESSORY, OUTERWEAR
+    val category: String,
     val colorHex: String? = null,
     val colorName: String? = null,
     val style: String? = null,
@@ -17,22 +15,6 @@ data class CreateGarmentRequest(
     val imageUrl: String? = null,
     val notes: String? = null
 )
-
-@Serializable
-data class UpdateGarmentRequest(
-    val name: String? = null,
-    val category: String? = null,
-    val colorHex: String? = null,
-    val colorName: String? = null,
-    val style: String? = null,
-    val brand: String? = null,
-    val size: String? = null,
-    val status: String? = null,
-    val imageUrl: String? = null,
-    val notes: String? = null
-)
-
-// --- Response DTO ---
 
 @Serializable
 data class GarmentResponse(
@@ -50,4 +32,11 @@ data class GarmentResponse(
     val notes: String?,
     val createdAt: String,
     val updatedAt: String
+)
+
+@Serializable
+data class ApiResponse<T>(
+    val success: Boolean,
+    val message: String?,
+    val data: T?
 )
