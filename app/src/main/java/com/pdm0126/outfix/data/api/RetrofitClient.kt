@@ -10,9 +10,9 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // 10.0.2.2 es el localhost de la máquina desde el emulador de Android.
-    // Si pruebas en un dispositivo físico, debes cambiarlo por la IP de tu computadora (ej: http://192.168.1.5:8080/)
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // 192.168.1.41 es la IP actual de tu Mac en tu red Wi-Fi para que el celular pueda conectarse.
+    // IMPORTANTE: Tu celular y tu Mac deben estar conectados a la misma red Wi-Fi.
+    private const val BASE_URL = "http://192.168.1.41:8080/"
 
     private val json = Json {
         ignoreUnknownKeys = true
