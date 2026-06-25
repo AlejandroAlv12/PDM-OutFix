@@ -19,6 +19,29 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import com.pdm0126.outfix.ui.liquidGlass
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.graphics.drawscope.translate
+import android.os.Build
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -47,7 +70,11 @@ fun NewGarmentScreen(
     var title by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "") }
     var selectedCategory by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "Camisa") }
     var showCategoryMenu by remember { mutableStateOf(false) }
-    val categories = listOf("Camisa", "Pantalón", "Gorra / Sombrero", "Calzado", "Vestido", "Bolso / Mochila", "Accesorio", "Otro")
+    val categories = listOf(
+        "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo",
+        "Pantalón", "Jeans", "Short", "Falda",
+        "Cabeza", "Calzado", "Vestido", "Bolso", "Accesorio", "Otro"
+    )
     
     val styles = listOf("casual", "formal", "deportiva", "verano", "invierno")
     var selectedStyle by remember { mutableStateOf("casual") }
@@ -59,16 +86,29 @@ fun NewGarmentScreen(
     var marcaEj by remember { mutableStateOf("") }
     
     var selectedSizeIndex by remember { mutableStateOf(1) }
+    
+    val backgroundLayer = rememberGraphicsLayer()
+    var buttonCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
+    var screenCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFAFAFA)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 24.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { screenCoords = it }
+                    .drawWithContent {
+                        backgroundLayer.record {
+                            drawRect(Color(0xFFFAFAFA))
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(backgroundLayer)
+                    }
+                    .padding(top = 24.dp)
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,33 +169,24 @@ fun NewGarmentScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Box(
-                    modifier = Modifier.wrapContentSize(Alignment.TopStart)
+                    modifier = Modifier.wrapContentSize(Alignment.TopStart).zIndex(10f)
                 ) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(Color.Black)
-                            .clickable { showCategoryMenu = true }
+                            .onGloballyPositioned { buttonCoords = it }
+                            .clickable { showCategoryMenu = !showCategoryMenu }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = selectedCategory, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Icon(imageVector = Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
-                    }
-
-                    DropdownMenu(
-                        expanded = showCategoryMenu,
-                        onDismissRequest = { showCategoryMenu = false }
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedCategory = category
-                                    showCategoryMenu = false
-                                }
+                            Icon(
+                                imageVector = if (showCategoryMenu) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, 
+                                contentDescription = null, 
+                                tint = Color.White, 
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -306,6 +337,96 @@ fun NewGarmentScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(40.dp))
+            }
+        }
+
+            val menuVisibleState = remember { MutableTransitionState(false) }
+            menuVisibleState.targetState = showCategoryMenu
+
+            if (menuVisibleState.currentState || menuVisibleState.targetState) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { showCategoryMenu = false }
+                )
+                
+                if (buttonCoords != null) {
+                    val density = LocalDensity.current
+                    val yOffset = with(density) { buttonCoords!!.positionInRoot().y.toDp() + buttonCoords!!.size.height.toDp() + 8.dp }
+                    val xOffset = with(density) { buttonCoords!!.positionInRoot().x.toDp() + (buttonCoords!!.size.width.toDp() / 2) - 100.dp }
+
+                    Box(
+                        modifier = Modifier
+                            .absoluteOffset(x = xOffset, y = yOffset)
+                            .width(200.dp)
+                            .heightIn(max = 300.dp)
+                    ) {
+                        AnimatedVisibility(
+                            visibleState = menuVisibleState,
+                            enter = expandVertically(expandFrom = Alignment.Top, animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
+                            exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                var menuCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
+                                
+                                if (Build.VERSION.SDK_INT >= 31) {
+                                    androidx.compose.foundation.Canvas(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .onGloballyPositioned { menuCoords = it }
+                                            .liquidGlass(
+                                                blur = 30f,
+                                                saturation = 1.4f,
+                                                refraction = 0.6f,
+                                                curve = 0.08f,
+                                                dispersion = 0.25f,
+                                                normalizedRadius = 0.15f
+                                            )
+                                    ) {
+                                        if (menuCoords != null && screenCoords != null) {
+                                            val menuPos = menuCoords!!.positionInRoot()
+                                            val screenPos = screenCoords!!.positionInRoot()
+                                            translate(left = -(menuPos.x - screenPos.x), top = -(menuPos.y - screenPos.y)) {
+                                                drawLayer(backgroundLayer)
+                                            }
+                                            drawRect(Color.White.copy(alpha = 0.4f))
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(16.dp))
+                                    )
+                                }
+                                
+                                LazyColumn(
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                ) {
+                                    items(categories) { category ->
+                                        Text(
+                                            text = category,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedCategory = category
+                                                    showCategoryMenu = false
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            color = Color.Black,
+                                            fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 14.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -1071,9 +1071,25 @@ fun processCapturedImageData(
                 category = "Cabeza"
             } else if (foundLabels.any { it in listOf("shoe", "footwear", "sneaker", "boot") }) {
                 category = "Calzado"
-            } else if (foundLabels.any { it in listOf("shirt", "t-shirt", "top", "blouse", "sweater", "jacket") }) {
+            } else if (foundLabels.any { it in listOf("sweater") }) {
+                category = "Suéter"
+            } else if (foundLabels.any { it in listOf("jacket") }) {
+                category = "Chaqueta"
+            } else if (foundLabels.any { it in listOf("coat") }) {
+                category = "Abrigo"
+            } else if (foundLabels.any { it in listOf("blouse") }) {
+                category = "Blusa"
+            } else if (foundLabels.any { it in listOf("t-shirt") }) {
+                category = "Camiseta"
+            } else if (foundLabels.any { it in listOf("shirt", "top") }) {
                 category = "Camisa"
-            } else if (foundLabels.any { it in listOf("pants", "trousers", "jeans", "shorts", "skirt") }) {
+            } else if (foundLabels.any { it in listOf("jeans") }) {
+                category = "Jeans"
+            } else if (foundLabels.any { it in listOf("shorts") }) {
+                category = "Short"
+            } else if (foundLabels.any { it in listOf("skirt") }) {
+                category = "Falda"
+            } else if (foundLabels.any { it in listOf("pants", "trousers") }) {
                 category = "Pantalón"
             } else if (foundLabels.any { it in listOf("dress") }) {
                 category = "Vestido"
