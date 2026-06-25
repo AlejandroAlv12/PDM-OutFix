@@ -165,6 +165,7 @@ fun MainScreen() {
             val screenHeight = configuration.screenHeightDp.dp + 100.dp
 
             val isFabExpanded = showScanner || capturedImagePath != null
+            val isHome = pagerState.currentPage == screens.indexOf(OutFixScreen.Home)
 
             androidx.activity.compose.BackHandler(enabled = isFabExpanded) {
                 if (capturedImagePath != null) {
@@ -205,28 +206,37 @@ fun MainScreen() {
                 animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabNormalizedRadius"
             )
-            Box(
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isHome || isFabExpanded,
+                enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                exit = androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutLinearInEasing)) + 
+                       androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(350)),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = fabPaddingEnd, bottom = fabPaddingBottom)
-                    .size(width = fabWidth, height = fabHeight)
-                    .onGloballyPositioned { coords ->
-                        if (pagerCoords != null) {
-                            fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
-                        }
-                    }
-                    .clip(RoundedCornerShape(fabCornerRadius))
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null
-                    ) { 
-                        if (!isFabExpanded) {
-                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            showScanner = true 
-                        }
-                    },
-                contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = fabWidth, height = fabHeight)
+                        .onGloballyPositioned { coords ->
+                            if (pagerCoords != null) {
+                                fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
+                            }
+                        }
+                        .clip(RoundedCornerShape(fabCornerRadius))
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) { 
+                            if (!isFabExpanded) {
+                                hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                showScanner = true 
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
                 val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(
                     targetValue = if (isFabExpanded) 1f else 0f,
                     animationSpec = if (isFabExpanded) {
@@ -338,6 +348,7 @@ fun MainScreen() {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
