@@ -918,7 +918,19 @@ fun CameraPreviewView(
 
                 previewView
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { view ->
+                val ctx = view.context
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                cameraProviderFuture.addListener({
+                    try {
+                        val cameraProvider = cameraProviderFuture.get()
+                        cameraProvider.unbindAll()
+                    } catch (exc: Exception) {
+                        Log.e("CameraPreview", "Error unbinding camera", exc)
+                    }
+                }, ContextCompat.getMainExecutor(ctx))
+            }
         )
     }
 }
