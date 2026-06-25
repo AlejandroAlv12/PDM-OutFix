@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import android.os.Build
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import com.pdm0126.outfix.screens.home.HomeScreen
-import com.pdm0126.outfix.screens.editor.OutfitEditorScreen
+import com.pdm0126.outfix.screens.laundry.LaundryScreen
 import com.pdm0126.outfix.screens.planner.WeeklyPlannerScreen
 import com.pdm0126.outfix.screens.closet.ClosetScreen
 import com.pdm0126.outfix.screens.profile.ProfileScreen
@@ -62,9 +62,9 @@ import kotlin.math.roundToInt
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
     Home("Home", Icons.Outlined.Home),
-    OutfitEditor("Editor", Icons.Outlined.Checkroom),
+    Closet("Closet", Icons.Outlined.Checkroom),
     WeeklyPlanner("Planner", Icons.Outlined.CalendarToday),
-    Closet("Closet", Icons.Outlined.DeleteOutline),
+    Laundry("Cesto", Icons.Outlined.LocalLaundryService),
     Profile("Profile", Icons.Outlined.Person)
 }
 
@@ -169,9 +169,9 @@ fun MainScreen() {
             ) { page ->
                 when (screens[page]) {
                     OutFixScreen.Home -> HomeScreen()
-                    OutFixScreen.OutfitEditor -> OutfitEditorScreen()
-                    OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
                     OutFixScreen.Closet -> ClosetScreen()
+                    OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
+                    OutFixScreen.Laundry -> LaundryScreen()
                     OutFixScreen.Profile -> ProfileScreen()
                 }
             }
