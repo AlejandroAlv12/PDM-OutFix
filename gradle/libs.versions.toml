@@ -23,7 +23,7 @@ okhttp = "4.12.0"
 # Backend
 ktor = "3.0.0"
 exposed = "0.50.0"
-postgresql = "42.7.3"
+sqlite = "3.46.0.0"
 hikari = "5.1.0"
 java-jwt = "4.4.0"
 jbcrypt = "0.4"
@@ -79,7 +79,7 @@ exposed-core = { group = "org.jetbrains.exposed", name = "exposed-core", version
 exposed-dao = { group = "org.jetbrains.exposed", name = "exposed-dao", version.ref = "exposed" }
 exposed-jdbc = { group = "org.jetbrains.exposed", name = "exposed-jdbc", version.ref = "exposed" }
 exposed-java-time = { group = "org.jetbrains.exposed", name = "exposed-java-time", version.ref = "exposed" }
-postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
+sqlite = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
 hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
 
 # Backend - Autenticación

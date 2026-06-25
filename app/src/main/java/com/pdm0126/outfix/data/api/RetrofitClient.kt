@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // 10.0.2.2 es el localhost de la máquina desde el emulador de Android.
-    // Si pruebas en un dispositivo físico, debes cambiarlo por la IP de tu computadora (ej: http://192.168.1.5:8080/)
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // Si probamos en un dispositivo físico, debemos cambiarlo por la IP de nuestra computadora (ej: http://192.168.1.7:8080/)
+    private const val BASE_URL = "http://192.168.1.7/"
 
     private val json = Json {
         ignoreUnknownKeys = true

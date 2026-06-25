@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.java.time)
-    implementation(libs.postgresql)
+    implementation(libs.sqlite)
     implementation(libs.hikari)
 
     // Autenticación
