@@ -9,8 +9,10 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import android.os.Build
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -57,6 +60,14 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import java.io.File
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,14 +96,29 @@ fun NewGarmentScreen(
     var estiloEj by remember { mutableStateOf("") }
     var marcaEj by remember { mutableStateOf("") }
     
-    var selectedSizeIndex by remember { mutableStateOf(1) }
+    var selectedSizeIndex by remember { mutableStateOf(2) }
+    var manualTitleEdit by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedCategory, marcaEj) {
+        if (!manualTitleEdit) {
+            title = if (marcaEj.isNotEmpty()) "$selectedCategory $marcaEj" else selectedCategory
+        }
+    }
     
     val backgroundLayer = rememberGraphicsLayer()
     var buttonCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
     var screenCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
+    
+    val focusManager = LocalFocusManager.current
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            },
         color = Color(0xFFFAFAFA)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -163,6 +189,7 @@ fun NewGarmentScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -176,7 +203,10 @@ fun NewGarmentScreen(
                             .clip(RoundedCornerShape(50))
                             .background(Color.Black)
                             .onGloballyPositioned { buttonCoords = it }
-                            .clickable { showCategoryMenu = !showCategoryMenu }
+                            .clickable { 
+                                focusManager.clearFocus()
+                                showCategoryMenu = !showCategoryMenu 
+                            }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -221,7 +251,10 @@ fun NewGarmentScreen(
 
                 BasicTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = { 
+                        title = it
+                        manualTitleEdit = true
+                    },
                     textStyle = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -299,7 +332,7 @@ fun NewGarmentScreen(
                     OutlinedTextField(
                         value = estiloEj,
                         onValueChange = { estiloEj = it },
-                        placeholder = { Text("Estilo: ej. Oversize", color = Color.Gray, fontSize = 14.sp) },
+                        placeholder = { Text("Estilo:", color = Color.Gray, fontSize = 14.sp) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
@@ -309,13 +342,13 @@ fun NewGarmentScreen(
                             focusedIndicatorColor = Color.Black
                         ),
                         singleLine = true,
-                        textStyle = TextStyle(fontSize = 14.sp)
+                        textStyle = TextStyle(fontSize = 14.sp, color = Color.Black)
                     )
 
                     OutlinedTextField(
                         value = marcaEj,
                         onValueChange = { marcaEj = it },
-                        placeholder = { Text("Marca: ej. Adidas", color = Color.Gray, fontSize = 14.sp) },
+                        placeholder = { Text("Marca:", color = Color.Gray, fontSize = 14.sp) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
@@ -325,16 +358,18 @@ fun NewGarmentScreen(
                             focusedIndicatorColor = Color.Black
                         ),
                         singleLine = true,
-                        textStyle = TextStyle(fontSize = 14.sp)
+                        textStyle = TextStyle(fontSize = 14.sp, color = Color.Black)
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                CustomSizeSlider(
-                    selectedIndex = selectedSizeIndex,
-                    onIndexChanged = { selectedSizeIndex = it }
-                )
+                if (selectedCategory !in listOf("Calzado", "Bolso", "Cabeza")) {
+                    CustomSizeSlider(
+                        selectedIndex = selectedSizeIndex,
+                        onIndexChanged = { selectedSizeIndex = it }
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(40.dp))
             }
@@ -353,7 +388,7 @@ fun NewGarmentScreen(
                         ) { showCategoryMenu = false }
                 )
                 
-                if (buttonCoords != null) {
+                if (buttonCoords?.isAttached == true) {
                     val density = LocalDensity.current
                     val yOffset = with(density) { buttonCoords!!.positionInRoot().y.toDp() + buttonCoords!!.size.height.toDp() + 8.dp }
                     val xOffset = with(density) { buttonCoords!!.positionInRoot().x.toDp() + (buttonCoords!!.size.width.toDp() / 2) - 100.dp }
@@ -386,7 +421,7 @@ fun NewGarmentScreen(
                                                 normalizedRadius = 0.15f
                                             )
                                     ) {
-                                        if (menuCoords != null && screenCoords != null) {
+                                        if (menuCoords?.isAttached == true && screenCoords?.isAttached == true) {
                                             val menuPos = menuCoords!!.positionInRoot()
                                             val screenPos = screenCoords!!.positionInRoot()
                                             translate(left = -(menuPos.x - screenPos.x), top = -(menuPos.y - screenPos.y)) {
@@ -438,80 +473,187 @@ fun CustomSizeSlider(
     onIndexChanged: (Int) -> Unit
 ) {
     val sizes = listOf("XS", "S", "M", "L", "XL")
+    val haptic = LocalHapticFeedback.current
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+
+    var isDragging by remember { mutableStateOf(false) }
+    var dragX by remember { mutableStateOf(0f) }
     
+    val trackLayer = rememberGraphicsLayer()
+    val density = LocalDensity.current
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(top = 24.dp)
+            .padding(bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = sizes[selectedIndex],
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = Color.Black
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        change.consume()
-                        val width = size.width
-                        val segment = width / (sizes.size - 1).toFloat()
-                        val pos = change.position.x.coerceIn(0f, width.toFloat())
-                        val index = (pos / segment).toInt().coerceIn(0, sizes.size - 1)
-                        onIndexChanged(index)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth(0.75f).height(60.dp)) {
+            val widthPx = constraints.maxWidth.toFloat()
+            val segmentPx = if (sizes.size > 1) widthPx / (sizes.size - 1) else 0f
+            
+            val targetX = if (isDragging) dragX else (segmentPx * selectedIndex)
+            
+            val animatedX by animateFloatAsState(
+                targetValue = targetX,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "sliderHandle"
+            )
+
+            val textToDisplay = if (segmentPx > 0) {
+                val idx = (animatedX / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
+                sizes[idx]
+            } else sizes[selectedIndex]
+            
+            val thumbHalfWidthPx = with(density) { 24.dp.toPx() }
+            val thumbOffsetYPx = with(density) { 24.dp.toPx() }
+
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawWithContent {
+                        trackLayer.record {
+                            drawRect(Color(0xFFFAFAFA))
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(trackLayer)
                     }
-                }
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val width = size.width
+            ) {
+                Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .align(Alignment.BottomCenter)
+                    .pointerInput(segmentPx) {
+                        var lastVibratedIndex = -1
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset ->
+                                isDragging = true
+                                dragX = offset.x.coerceIn(0f, widthPx)
+                                lastVibratedIndex = (dragX / segmentPx).roundToInt()
+                            },
+                            onDragEnd = {
+                                isDragging = false
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                            }
+                        ) { change, _ ->
+                            change.consume()
+                            dragX = change.position.x.coerceIn(0f, widthPx)
+                            
+                            for (i in sizes.indices) {
+                                val cx = i * segmentPx
+                                if (Math.abs(dragX - cx) < (segmentPx * 0.15f)) {
+                                    if (lastVibratedIndex != i) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        lastVibratedIndex = i
+                                    }
+                                    break
+                                }
+                            }
+
+                            val newIndex = (dragX / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
+                            if (newIndex != currentSelectedIndex) {
+                                onIndexChanged(newIndex)
+                            }
+                        }
+                    }
+                    .pointerInput(segmentPx) {
+                        detectTapGestures(
+                            onTap = { offset ->
+                                val newIndex = (offset.x / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
+                                if (newIndex != currentSelectedIndex) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onIndexChanged(newIndex)
+                                }
+                            }
+                        )
+                    }
+            ) {
                 val centerY = size.height / 2f
-                val segment = width / (sizes.size - 1)
-                
                 val activeColor = Color(0xFF007AFF)
                 val inactiveColor = Color(0xFFE0E0E0)
-                
-                val activeEndX = segment * selectedIndex
                 
                 drawLine(
                     color = activeColor,
                     start = Offset(0f, centerY),
-                    end = Offset(activeEndX, centerY),
+                    end = Offset(animatedX, centerY),
                     strokeWidth = 4.dp.toPx()
                 )
                 
                 drawLine(
                     color = inactiveColor,
-                    start = Offset(activeEndX, centerY),
-                    end = Offset(width, centerY),
+                    start = Offset(animatedX, centerY),
+                    end = Offset(widthPx, centerY),
                     strokeWidth = 4.dp.toPx()
                 )
                 
                 for (i in sizes.indices) {
-                    val cx = i * segment
-                    val isActive = i <= selectedIndex
+                    val cx = i * segmentPx
+                    val isActive = cx <= animatedX + 1f
                     
-                    if (i == selectedIndex) {
-                        drawCircle(color = activeColor.copy(alpha = 0.2f), radius = 16.dp.toPx(), center = Offset(cx, centerY))
-                        drawCircle(color = Color.White, radius = 8.dp.toPx(), center = Offset(cx, centerY))
-                        drawCircle(color = activeColor, radius = 4.dp.toPx(), center = Offset(cx, centerY))
-                    } else {
-                        drawCircle(
-                            color = if (isActive) activeColor else inactiveColor,
-                            radius = 5.dp.toPx(),
-                            center = Offset(cx, centerY)
-                        )
-                        drawCircle(
-                            color = Color.White,
-                            radius = 3.dp.toPx(),
-                            center = Offset(cx, centerY)
-                        )
-                    }
+                    drawCircle(
+                        color = if (isActive) activeColor else inactiveColor,
+                        radius = 5.dp.toPx(),
+                        center = Offset(cx, centerY)
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 3.dp.toPx(),
+                        center = Offset(cx, centerY)
+                    )
                 }
+                
+            }
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { 
+                        IntOffset(
+                            (animatedX - thumbHalfWidthPx).roundToInt(), 
+                            thumbOffsetYPx.roundToInt()
+                        ) 
+                    }
+                    .size(48.dp, 32.dp)
+                    .liquidGlass(
+                        blur = 0f,
+                        saturation = 1.2f,
+                        refraction = 0.4f,
+                        curve = 0.6f,
+                        dispersion = 0.25f,
+                        normalizedRadius = 0.5f
+                    )
+            ) {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        translate(left = -(animatedX - thumbHalfWidthPx), top = -thumbOffsetYPx) {
+                            drawLayer(trackLayer)
+                        }
+                        drawRect(Color.White.copy(alpha = 0.5f))
+                    }
+                } else {
+                    Box(modifier = Modifier.matchParentSize().background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(50)))
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(animatedX.roundToInt(), 0) }
+            ) {
+                Text(
+                    text = textToDisplay,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    modifier = Modifier.offset(x = (-10).dp)
+                )
             }
         }
     }
