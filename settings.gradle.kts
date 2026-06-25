@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OutFix"
 include(":app")
+include(":backend")
