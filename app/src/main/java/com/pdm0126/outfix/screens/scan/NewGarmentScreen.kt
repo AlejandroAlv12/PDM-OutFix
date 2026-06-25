@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import java.io.File
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -67,6 +68,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,7 +182,7 @@ fun NewGarmentScreen(
                                 isSaving = true
                                 try {
                                     val sizeList = listOf("XS", "S", "M", "L", "XL")
-                                    val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.value.toInt())
+                                    val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
                                     val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
                                         name = title.ifBlank { selectedCategory },
                                         category = selectedCategory,
