@@ -23,13 +23,6 @@ fun HomeScreen() {
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        Text(
-            text = "Outfix",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFF423D38),
-            modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
-        )
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),

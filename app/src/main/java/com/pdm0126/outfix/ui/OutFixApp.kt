@@ -68,6 +68,7 @@ enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
     Profile("Profile", Icons.Outlined.Person)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val screens = OutFixScreen.entries
@@ -109,7 +110,45 @@ fun MainScreen() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFEDDDCC)
+        containerColor = Color(0xFFFFFFFF),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "OutFix",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                            color = Color.Black,
+                            modifier = Modifier.padding(end = 48.dp)
+                        )
+                    }
+                },
+                navigationIcon = {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.Gray.copy(alpha = 0.5f))
+                            .clickable {  },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = "Menu",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    scrolledContainerColor = Color.White
+                )
+            )
+        }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
