@@ -284,3 +284,135 @@ fun HorizontalEdgesProgressiveBlurLayer(
         }
     }
 }
+
+const val VerticalEdgesProgressiveBlurShader = """
+    uniform shader content;
+    uniform float2 size;
+    uniform float maxBlur;
+    uniform float edgeHeightFraction;
+
+    float hash12(float2 p) {
+        float3 p3  = fract(float3(p.xyx) * .1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
+    }
+
+    half4 main(float2 fragCoord) {
+        float yFrag = fragCoord.y / size.y;
+        float distFromEdge = min(yFrag, 1.0 - yFrag);
+        float progress = clamp((edgeHeightFraction - distFromEdge) / edgeHeightFraction, 0.0, 1.0);
+        float radius = maxBlur * progress;
+        
+        if (radius < 0.5) {
+            return content.eval(fragCoord);
+        }
+        
+        half4 sum = half4(0.0);
+        float totalWeight = 0.0;
+        
+        const int SAMPLES = 60;
+        const float GOLDEN_ANGLE = 2.39996323;
+        float startAngle = hash12(fragCoord) * 6.2831853;
+        const float INV_SAMPLES = 1.0 / float(SAMPLES);
+        
+        for (int i = 0; i < SAMPLES; i++) {
+            float t = float(i) * INV_SAMPLES;
+            float r = radius * sqrt(t); 
+            float theta = startAngle + float(i) * GOLDEN_ANGLE;
+            float2 offset = float2(cos(theta), sin(theta)) * r;
+            float2 samplePos = fragCoord + offset;
+            
+            samplePos.x = clamp(samplePos.x, 0.5, size.x - 0.5);
+            samplePos.y = clamp(samplePos.y, 0.5, size.y - 0.5);
+            
+            float weight = 1.0 - (t * t); 
+            
+            sum += content.eval(samplePos) * weight;
+            totalWeight += weight;
+        }
+        
+        return sum / totalWeight;
+    }
+"""
+
+@Composable
+fun VerticalEdgesProgressiveBlurLayer(
+    modifier: Modifier = Modifier,
+    contentLayer: GraphicsLayer,
+    maxBlur: Float = 60f,
+    edgeHeightFraction: Float = 0.15f
+) {
+    if (android.os.Build.VERSION.SDK_INT >= 33) {
+        var shaderSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
+        val shaderEffect = remember(shaderSize, maxBlur, edgeHeightFraction) {
+            if (shaderSize.width > 0f && shaderSize.height > 0f) {
+                val shader = android.graphics.RuntimeShader(VerticalEdgesProgressiveBlurShader).apply {
+                    setFloatUniform("size", shaderSize.width, shaderSize.height)
+                    setFloatUniform("maxBlur", maxBlur)
+                    setFloatUniform("edgeHeightFraction", edgeHeightFraction)
+                }
+                android.graphics.RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+            } else null
+        }
+
+        Box(
+            modifier = modifier.onSizeChanged {
+                shaderSize = androidx.compose.ui.geometry.Size(it.width.toFloat(), it.height.toFloat())
+            }
+        ) {
+            if (shaderEffect != null) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { renderEffect = shaderEffect }
+                ) {
+                    drawLayer(contentLayer)
+                }
+            }
+        }
+    } else {
+        val layers = 3
+        val blurStep = maxBlur / layers
+        
+        Box(modifier = modifier) {
+            for (i in 0 until layers) {
+                val currentBlur = blurStep * (i + 1)
+                val fraction = i.toFloat() / (layers - 1).coerceAtLeast(1)
+                val edgeF = edgeHeightFraction * fraction
+                
+                var size by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
+                val renderEffect = remember(currentBlur) {
+                    if (android.os.Build.VERSION.SDK_INT >= 31) {
+                        android.graphics.RenderEffect.createBlurEffect(
+                            currentBlur, currentBlur, android.graphics.Shader.TileMode.CLAMP
+                        ).asComposeRenderEffect()
+                    } else null
+                }
+                
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onSizeChanged { size = androidx.compose.ui.geometry.Size(it.width.toFloat(), it.height.toFloat()) }
+                        .graphicsLayer { 
+                            if (renderEffect != null) {
+                                this.renderEffect = renderEffect 
+                            }
+                        }
+                ) {
+                    if (size.width > 0f && size.height > 0f) {
+                        val brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            0f to androidx.compose.ui.graphics.Color.Transparent,
+                            edgeF to androidx.compose.ui.graphics.Color.Black,
+                            1f - edgeF to androidx.compose.ui.graphics.Color.Black,
+                            1f to androidx.compose.ui.graphics.Color.Transparent
+                        )
+                        drawContext.canvas.saveLayer(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), androidx.compose.ui.graphics.Paint())
+                        drawLayer(contentLayer)
+                        drawRect(brush = brush, blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                        drawContext.canvas.restore()
+                    }
+                }
+            }
+        }
+    }
+}

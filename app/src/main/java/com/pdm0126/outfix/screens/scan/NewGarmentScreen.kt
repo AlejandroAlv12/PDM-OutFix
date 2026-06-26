@@ -23,10 +23,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -35,6 +41,7 @@ import androidx.compose.ui.zIndex
 import com.pdm0126.outfix.ui.liquidGlass
 import com.pdm0126.outfix.ui.bouncyClickable
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -47,6 +54,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -139,6 +147,13 @@ fun NewGarmentScreen(
         color = Color(0xFFFAFAFA)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            val targetWidth = 200.dp
+            val menuProgress by animateFloatAsState(
+                targetValue = if (showCategoryMenu) 1f else 0f,
+                animationSpec = tween(400),
+                label = "menuProgress"
+            )
+            
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -262,8 +277,23 @@ fun NewGarmentScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                var isMenuPressed by remember { mutableStateOf(false) }
+                val menuScale by animateFloatAsState(
+                    targetValue = if (isMenuPressed) 0.95f else 1f,
+                    animationSpec = spring(stiffness = 400f),
+                    label = "menuScale"
+                )
+                val cornerRadius by animateDpAsState(
+                    targetValue = if (showCategoryMenu) 24.dp else 50.dp,
+                    animationSpec = tween(400),
+                    label = "cornerRadius"
+                )
+
                 Box(
-                    modifier = Modifier.wrapContentSize(Alignment.TopStart).zIndex(10f)
+                    modifier = Modifier
+                        .wrapContentSize(Alignment.TopStart)
+                        .zIndex(10f)
+                        .alpha(if (menuProgress > 0f) 0f else 1f)
                 ) {
                     Box(
                         modifier = Modifier
@@ -272,19 +302,23 @@ fun NewGarmentScreen(
                             .onGloballyPositioned { buttonCoords = it }
                             .clickable { 
                                 focusManager.clearFocus()
-                                showCategoryMenu = !showCategoryMenu 
+                                showCategoryMenu = true 
                             }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = selectedCategory, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = if (showCategoryMenu) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, 
-                                contentDescription = null, 
-                                tint = Color.White, 
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+                                val strokeWidth = 2.dp.toPx()
+                                val startX = 4.dp.toPx()
+                                val endX = 14.dp.toPx()
+                                val centerX = 9.dp.toPx()
+                                val topY = 5.dp.toPx()
+                                val bottomY = 10.dp.toPx()
+                                drawLine(color = Color.White, start = Offset(startX, topY), end = Offset(centerX, bottomY), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                                drawLine(color = Color.White, start = Offset(endX, topY), end = Offset(centerX, bottomY), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            }
                         }
                     }
                 }
@@ -499,10 +533,10 @@ fun NewGarmentScreen(
             }
         }
 
-            val menuVisibleState = remember { MutableTransitionState(false) }
-            menuVisibleState.targetState = showCategoryMenu
-
-            if (menuVisibleState.currentState || menuVisibleState.targetState) {
+        // Overlay Menu to prevent RenderNode infinite loop crash
+        val showOverlay = showCategoryMenu || (menuProgress > 0f)
+        if (showOverlay && buttonCoords?.isAttached == true) {
+            if (showCategoryMenu) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -511,82 +545,168 @@ fun NewGarmentScreen(
                             indication = null
                         ) { showCategoryMenu = false }
                 )
-                
-                if (buttonCoords?.isAttached == true) {
-                    val density = LocalDensity.current
-                    val yOffset = with(density) { buttonCoords!!.positionInRoot().y.toDp() + buttonCoords!!.size.height.toDp() + 8.dp }
-                    val xOffset = with(density) { buttonCoords!!.positionInRoot().x.toDp() + (buttonCoords!!.size.width.toDp() / 2) - 100.dp }
+            }
+            
+            val density = LocalDensity.current
+            val buttonWidth = with(density) { buttonCoords!!.size.width.toDp() }
+            val buttonHeight = with(density) { buttonCoords!!.size.height.toDp() }
+            val yOffset = with(density) { buttonCoords!!.positionInRoot().y.toDp() }
+            val startXOffset = with(density) { buttonCoords!!.positionInRoot().x.toDp() }
+            
+            val currentWidth = androidx.compose.ui.unit.lerp(buttonWidth, targetWidth, menuProgress)
+            val currentX = androidx.compose.ui.unit.lerp(startXOffset, startXOffset - (targetWidth - buttonWidth) / 2, menuProgress)
+            val cornerRadius = androidx.compose.ui.unit.lerp(buttonHeight / 2, 24.dp, menuProgress)
+            
+            var isMenuPressed by remember { mutableStateOf(false) }
+            val menuScale by animateFloatAsState(
+                targetValue = if (isMenuPressed) 0.95f else 1f,
+                animationSpec = spring(stiffness = 400f),
+                label = "menuScale"
+            )
+            var overlayCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
-                    Box(
+            Box(
+                modifier = Modifier
+                    .absoluteOffset(x = currentX, y = yOffset)
+                    .graphicsLayer {
+                        scaleX = menuScale
+                        scaleY = menuScale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                    }
+                    .clip(RoundedCornerShape(cornerRadius))
+                    .width(currentWidth)
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val startHeightPx = buttonHeight.roundToPx()
+                        val currentHeightPx = androidx.compose.ui.util.lerp(startHeightPx.toFloat(), placeable.height.toFloat(), menuProgress).roundToInt()
+                        layout(placeable.width, currentHeightPx) {
+                            placeable.placeRelative(0, 0)
+                        }
+                    }
+                    .onGloballyPositioned { overlayCoords = it }
+            ) {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    androidx.compose.foundation.Canvas(
                         modifier = Modifier
-                            .absoluteOffset(x = xOffset, y = yOffset)
-                            .width(200.dp)
-                            .heightIn(max = 300.dp)
+                            .matchParentSize()
+                            .liquidGlass(
+                                blur = 30f,
+                                saturation = 1.4f,
+                                refraction = 0.6f,
+                                curve = 0.08f,
+                                dispersion = 0.25f,
+                                normalizedRadius = 0.15f
+                            )
                     ) {
-                        AnimatedVisibility(
-                            visibleState = menuVisibleState,
-                            enter = expandVertically(expandFrom = Alignment.Top, animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                            exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                var menuCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
-                                
-                                if (Build.VERSION.SDK_INT >= 31) {
-                                    androidx.compose.foundation.Canvas(
-                                        modifier = Modifier
-                                            .matchParentSize()
-                                            .onGloballyPositioned { menuCoords = it }
-                                            .liquidGlass(
-                                                blur = 30f,
-                                                saturation = 1.4f,
-                                                refraction = 0.6f,
-                                                curve = 0.08f,
-                                                dispersion = 0.25f,
-                                                normalizedRadius = 0.15f
-                                            )
-                                    ) {
-                                        if (menuCoords?.isAttached == true && screenCoords?.isAttached == true) {
-                                            val menuPos = menuCoords!!.positionInRoot()
-                                            val screenPos = screenCoords!!.positionInRoot()
-                                            translate(left = -(menuPos.x - screenPos.x), top = -(menuPos.y - screenPos.y)) {
-                                                drawLayer(backgroundLayer)
-                                            }
-                                            drawRect(Color.White.copy(alpha = 0.4f))
-                                        }
-                                    }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .matchParentSize()
-                                            .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(16.dp))
-                                    )
-                                }
-                                
-                                LazyColumn(
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                ) {
-                                    items(categories) { category ->
-                                        Text(
-                                            text = category,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    selectedCategory = category
-                                                    showCategoryMenu = false
-                                                }
-                                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                                            color = Color.Black,
-                                            fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 14.sp,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                        scale(scaleX = 1f / menuScale, scaleY = 1f / menuScale, pivot = Offset(size.width / 2f, 0f)) {
+                            if (screenCoords?.isAttached == true) {
+                                val screenPos = screenCoords!!.positionInRoot()
+                                val unscaledX = currentX.toPx()
+                                val unscaledY = yOffset.toPx()
+                                translate(left = -(unscaledX - screenPos.x), top = -(unscaledY - screenPos.y)) {
+                                    drawLayer(backgroundLayer)
                                 }
                             }
                         }
                     }
+                } else {
+                    Box(modifier = Modifier.matchParentSize().background(Color.White))
+                }
+                
+                val overlayColor = Color.White.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
+                val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
+                Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(buttonHeight)
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    isMenuPressed = true
+                                    waitForUpOrCancellation()
+                                    isMenuPressed = false
+                                }
+                            }
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { 
+                                focusManager.clearFocus()
+                                showCategoryMenu = !showCategoryMenu 
+                            }
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val textColor = androidx.compose.ui.graphics.lerp(Color.White, Color.Black, menuProgress)
+                        Text(text = selectedCategory, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+                            val strokeWidth = 2.dp.toPx()
+                            val startX = 4.dp.toPx()
+                            val endX = 14.dp.toPx()
+                            val centerX = 9.dp.toPx()
+                            val topY = 5.dp.toPx()
+                            val bottomY = 10.dp.toPx()
+                            val outerY = androidx.compose.ui.util.lerp(topY, bottomY, menuProgress)
+                            val innerY = androidx.compose.ui.util.lerp(bottomY, topY, menuProgress)
+                            drawLine(color = textColor, start = Offset(startX, outerY), end = Offset(centerX, innerY), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            drawLine(color = textColor, start = Offset(endX, outerY), end = Offset(centerX, innerY), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.Black.copy(alpha = 0.1f * menuProgress))
+                    val categoriesLayer = rememberGraphicsLayer()
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 300.dp)
+                                .drawWithContent {
+                                    categoriesLayer.record {
+                                        this@drawWithContent.drawContent()
+                                    }
+                                }
+                                .verticalScroll(rememberScrollState())
+                                .padding(vertical = 8.dp)
+                        ) {
+                            categories.forEach { category ->
+                                Text(
+                                    text = category,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedCategory = category
+                                            showCategoryMenu = false
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    color = Color.Black.copy(alpha = menuProgress),
+                                    fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        
+                        if (android.os.Build.VERSION.SDK_INT >= 31) {
+                            com.pdm0126.outfix.ui.VerticalEdgesProgressiveBlurLayer(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clipToBounds(),
+                                contentLayer = categoriesLayer,
+                                maxBlur = 20f,
+                                edgeHeightFraction = 0.08f
+                            )
+                        }
+                    }
                 }
             }
+        }
+
         }
     }
 }
