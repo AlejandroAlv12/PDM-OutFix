@@ -1,6 +1,8 @@
 package com.pdm0126.outfix.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -117,7 +119,38 @@ fun MainScreen(onLogout: () -> Unit = {}) {
 
     val bottomPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    var showAuthModal by remember { mutableStateOf(false) }
+
+    val authTransition = androidx.compose.animation.core.updateTransition(
+        targetState = showAuthModal, 
+        label = "AuthTransition"
+    )
+    val authBlur by authTransition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "AuthBlur"
+    ) { if (it) 30f else 0f }
+    val authAlpha by authTransition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(800) },
+        label = "AuthAlpha"
+    ) { if (it) 1f else 0f }
+    val authScale by authTransition.animateFloat(
+        transitionSpec = { 
+            if (targetState) {
+                androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 400f)
+            } else {
+                androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+            }
+        },
+        label = "AuthScale"
+    ) { if (it) 1f else 0.85f }
+
     Box(modifier = Modifier.fillMaxSize()) {
+        
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (authBlur > 0f && Build.VERSION.SDK_INT >= 31) Modifier.blur(authBlur.dp) else Modifier)
+        ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFFFFFFF),
@@ -160,7 +193,6 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             )
         }
     ) { innerPadding ->
-        var showAuthModal by remember { mutableStateOf(false) }
 
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
@@ -205,56 +237,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 )
             }
             
-            // Auth Modal Overlay
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showAuthModal,
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300)),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    if (Build.VERSION.SDK_INT >= 31) {
-                        androidx.compose.foundation.Canvas(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .liquidGlass(
-                                    blur = 32f,
-                                    saturation = 1.0f,
-                                    refraction = 0.3f,
-                                    curve = 0.3f,
-                                    dispersion = 0.15f
-                                )
-                                .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { showAuthModal = false }
-                                )
-                        ) {
-                            drawLayer(backgroundLayer)
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { showAuthModal = false }
-                                )
-                        )
-                    }
-                    
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
-                    
-                    AuthModal(
-                        onDismiss = { showAuthModal = false },
-                        onSuccess = { showAuthModal = false }
-                    )
-                }
-            }
+            // Auth modal overlay removed from here
         }
     }
 
@@ -489,7 +472,32 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 }
             }
     }
-}
+        }
+
+        if (authAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f * authAlpha))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showAuthModal = false }
+                    )
+            )
+            
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                AuthModal(
+                    isVisible = showAuthModal,
+                    onDismiss = { showAuthModal = false },
+                    onSuccess = { showAuthModal = false }
+                )
+            }
+        }
+    } // End of outer Box
+
 
 @Composable
 fun FloatingBottomNavBar(

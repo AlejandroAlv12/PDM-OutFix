@@ -1,6 +1,8 @@
 package com.pdm0126.outfix.ui
 
 import android.widget.Toast
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -27,6 +30,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthModal(
+    isVisible: Boolean = true,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
@@ -40,6 +44,30 @@ fun AuthModal(
     var username by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     
+    val transitionState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    transitionState.targetState = isVisible
+    val transition = androidx.compose.animation.core.updateTransition(transitionState, label = "AuthModalTransition")
+    
+    val containerOffsetX by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "containerOffset"
+    ) { if (it) 0f else 1000f }
+    
+    val logoOffsetY by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 50 else 0, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "logoOffset"
+    ) { if (it) 0f else -1000f }
+    
+    val nameOffsetY by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 25 else 25, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "nameOffset"
+    ) { if (it) 0f else -1000f }
+    
+    val sloganOffsetY by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 0 else 50, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "sloganOffset"
+    ) { if (it) 0f else -1000f }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -50,6 +78,7 @@ fun AuthModal(
         // Logo
         Box(
             modifier = Modifier
+                .graphicsLayer { translationY = logoOffsetY }
                 .size(100.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color.White)
@@ -70,7 +99,8 @@ fun AuthModal(
             fontSize = 40.sp,
             fontWeight = FontWeight.Black,
             color = Color.White,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            modifier = Modifier.graphicsLayer { translationY = nameOffsetY }
         )
         
         Text(
@@ -78,7 +108,8 @@ fun AuthModal(
             fontSize = 14.sp,
             color = Color.White.copy(alpha = 0.8f),
             fontWeight = FontWeight.Bold,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            modifier = Modifier.graphicsLayer { translationY = sloganOffsetY }
         )
         
         Spacer(modifier = Modifier.height(32.dp))
@@ -86,6 +117,7 @@ fun AuthModal(
         // Modal Card
         Box(
             modifier = Modifier
+                .graphicsLayer { translationX = containerOffsetX }
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFFE0E0E0).copy(alpha = 0.95f))
