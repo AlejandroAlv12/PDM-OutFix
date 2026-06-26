@@ -177,9 +177,8 @@ fun NewGarmentScreen(
 
                 Text(
                     text = "Nueva prenda",
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                     color = Color.Black
                 )
 
