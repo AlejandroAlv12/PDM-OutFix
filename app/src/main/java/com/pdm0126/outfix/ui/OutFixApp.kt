@@ -77,7 +77,7 @@ enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(onLogout: () -> Unit = {}) {
     val screens = OutFixScreen.entries
     val navigationState = rememberNavigationState(
         startRoute = OutFixScreen.Home,
@@ -182,7 +182,7 @@ fun MainScreen() {
                     OutFixScreen.Closet -> ClosetScreen()
                     OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
                     OutFixScreen.Laundry -> LaundryScreen()
-                    OutFixScreen.Profile -> ProfileScreen()
+                    OutFixScreen.Profile -> ProfileScreen(onLogout = onLogout)
                 }
             }
 

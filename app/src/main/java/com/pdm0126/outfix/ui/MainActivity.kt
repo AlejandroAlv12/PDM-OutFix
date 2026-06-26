@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pdm0126.outfix.ui.theme.OutFixTheme
-
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,7 +40,12 @@ class MainActivity : ComponentActivity() {
 
             OutFixTheme(darkTheme = true) {
                 when (currentScreen) {
-                    "main" -> MainScreen()
+                    "main" -> MainScreen(
+                        onLogout = {
+                            sessionManager.clearSession()
+                            currentScreen = "login"
+                        }
+                    )
                     "login" -> LoginScreen(
                         onLoginSuccess = { currentScreen = "main" },
                         onNavigateToRegister = { currentScreen = "register" }

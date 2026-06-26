@@ -133,8 +133,12 @@ fun RegisterScreen(
                             RegisterRequest(displayName = username.trim(), email = email.trim(), password = password)
                         )
                         if (response.success && response.data != null) {
-                            RetrofitClient.sessionManager?.saveAuthToken(response.data.token)
-                            RetrofitClient.sessionManager?.saveUserId(response.data.user.id)
+                            RetrofitClient.sessionManager?.apply {
+                                saveAuthToken(response.data.token)
+                                saveUserId(response.data.user.id)
+                                saveUserEmail(response.data.user.email)
+                                saveUserDisplayName(response.data.user.displayName)
+                            }
                             onRegisterSuccess()
                         } else {
                             Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
