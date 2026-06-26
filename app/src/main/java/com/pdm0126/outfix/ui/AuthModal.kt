@@ -266,13 +266,12 @@ fun AuthModal(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        // Fake Google Icon G
-                        Text(
-                            text = "G",
-                            color = Color(0xFFEA4335),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 20.sp,
-                            modifier = Modifier.padding(end = 8.dp)
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.pdm0126.outfix.R.drawable.ic_google),
+                            contentDescription = "Google Logo",
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(24.dp)
                         )
                         Text(
                             text = "Continuar con Google", 
