@@ -108,8 +108,11 @@ fun MainScreen() {
         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
+    val bottomPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFFFFFFF),
         topBar = {
             TopAppBar(
@@ -192,8 +195,10 @@ fun MainScreen() {
                     }
                 )
             }
+        }
+    }
 
-            var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
+    var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
             var showScanner by remember { mutableStateOf(false) }
             var capturedImagePath by remember { mutableStateOf<String?>(null) }
             var capturedCategory by remember { mutableStateOf("") }
@@ -231,7 +236,7 @@ fun MainScreen() {
                 label = "fabPaddingEnd"
             )
             val fabPaddingBottom by androidx.compose.animation.core.animateDpAsState(
-                targetValue = if (isFabExpanded) 0.dp else (innerPadding.calculateBottomPadding() + 110.dp),
+                targetValue = if (isFabExpanded) 0.dp else (bottomPadding + 110.dp),
                 animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                 label = "fabPaddingBottom"
             )
@@ -391,7 +396,6 @@ fun MainScreen() {
                     }
                 }
             }
-        }
     }
 }
 
