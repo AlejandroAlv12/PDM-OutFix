@@ -160,6 +160,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             )
         }
     ) { innerPadding ->
+        var showAuthModal by remember { mutableStateOf(false) }
+
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
                 modifier = Modifier
@@ -182,7 +184,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                     OutFixScreen.Closet -> ClosetScreen()
                     OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
                     OutFixScreen.Laundry -> LaundryScreen()
-                    OutFixScreen.Profile -> ProfileScreen(onLogout = onLogout)
+                    OutFixScreen.Profile -> ProfileScreen(onLogout = onLogout, onShowAuth = { showAuthModal = true })
                 }
             }
 
@@ -201,6 +203,57 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                         navigator.navigate(screen)
                     }
                 )
+            }
+            
+            // Auth Modal Overlay
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showAuthModal,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        androidx.compose.foundation.Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .liquidGlass(
+                                    blur = 32f,
+                                    saturation = 1.0f,
+                                    refraction = 0.3f,
+                                    curve = 0.3f,
+                                    dispersion = 0.15f
+                                )
+                                .clickable(
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { showAuthModal = false }
+                                )
+                        ) {
+                            drawLayer(backgroundLayer)
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.7f))
+                                .clickable(
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { showAuthModal = false }
+                                )
+                        )
+                    }
+                    
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
+                    
+                    AuthModal(
+                        onDismiss = { showAuthModal = false },
+                        onSuccess = { showAuthModal = false }
+                    )
+                }
             }
         }
     }

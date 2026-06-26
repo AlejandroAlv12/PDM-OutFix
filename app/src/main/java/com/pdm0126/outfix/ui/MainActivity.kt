@@ -20,8 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.pdm0126.outfix.data.api.RetrofitClient
 import com.pdm0126.outfix.data.prefs.SessionManager
-import com.pdm0126.outfix.screens.auth.LoginScreen
-import com.pdm0126.outfix.screens.auth.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,25 +34,12 @@ class MainActivity : ComponentActivity() {
         RetrofitClient.sessionManager = sessionManager
 
         setContent {
-            var currentScreen by remember { mutableStateOf(if (sessionManager.fetchAuthToken() != null) "main" else "login") }
-
             OutFixTheme(darkTheme = true) {
-                when (currentScreen) {
-                    "main" -> MainScreen(
-                        onLogout = {
-                            sessionManager.clearSession()
-                            currentScreen = "login"
-                        }
-                    )
-                    "login" -> LoginScreen(
-                        onLoginSuccess = { currentScreen = "main" },
-                        onNavigateToRegister = { currentScreen = "register" }
-                    )
-                    "register" -> RegisterScreen(
-                        onRegisterSuccess = { currentScreen = "main" },
-                        onNavigateToLogin = { currentScreen = "login" }
-                    )
-                }
+                MainScreen(
+                    onLogout = {
+                        sessionManager.clearSession()
+                    }
+                )
             }
         }
     }
