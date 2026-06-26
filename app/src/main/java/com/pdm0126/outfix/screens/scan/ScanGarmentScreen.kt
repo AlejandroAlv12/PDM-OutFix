@@ -1080,10 +1080,26 @@ fun processCapturedImageData(
     
     labeler.process(image)
         .addOnSuccessListener { labels ->
-            var category = "Desconocido"
+            var category = "Otro"
             val foundLabels = labels.map { it.text.lowercase() }
             
-            if (foundLabels.any { it in listOf("cap") }) {
+            if (foundLabels.any { it in listOf("glasses", "sunglasses") }) {
+                category = "Gafas"
+            } else if (foundLabels.any { it in listOf("watch", "wristwatch") }) {
+                category = "Reloj"
+            } else if (foundLabels.any { it in listOf("belt") }) {
+                category = "Cinturón"
+            } else if (foundLabels.any { it in listOf("tie") }) {
+                category = "Corbata"
+            } else if (foundLabels.any { it in listOf("scarf") }) {
+                category = "Bufanda"
+            } else if (foundLabels.any { it in listOf("necklace", "ring", "earring", "jewelry") }) {
+                category = "Joyería"
+            } else if (foundLabels.any { it in listOf("backpack") }) {
+                category = "Mochila"
+            } else if (foundLabels.any { it in listOf("bag", "handbag") }) {
+                category = "Bolso"
+            } else if (foundLabels.any { it in listOf("cap") }) {
                 category = "Gorra"
             } else if (foundLabels.any { it in listOf("hat", "fedora", "sombrero") }) {
                 category = "Sombrero"
@@ -1117,27 +1133,11 @@ fun processCapturedImageData(
                 category = "Pantalón"
             } else if (foundLabels.any { it in listOf("dress") }) {
                 category = "Vestido"
-            } else if (foundLabels.any { it in listOf("glasses", "sunglasses") }) {
-                category = "Gafas"
-            } else if (foundLabels.any { it in listOf("watch", "wristwatch") }) {
-                category = "Reloj"
-            } else if (foundLabels.any { it in listOf("belt") }) {
-                category = "Cinturón"
-            } else if (foundLabels.any { it in listOf("tie") }) {
-                category = "Corbata"
-            } else if (foundLabels.any { it in listOf("scarf") }) {
-                category = "Bufanda"
-            } else if (foundLabels.any { it in listOf("necklace", "ring", "earring", "jewelry") }) {
-                category = "Joyería"
-            } else if (foundLabels.any { it in listOf("backpack") }) {
-                category = "Mochila"
-            } else if (foundLabels.any { it in listOf("bag", "handbag") }) {
-                category = "Bolso"
             }
             
             onComplete(filePath, category, extractedColors)
         }
         .addOnFailureListener {
-            onComplete(filePath, "Desconocido", extractedColors)
+            onComplete(filePath, "Otro", extractedColors)
         }
 }
