@@ -31,8 +31,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
+
 import com.pdm0126.outfix.ui.liquidGlass
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -47,11 +46,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,8 +60,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.ui.theme.LimeGreen
+import com.pdm0126.outfix.ui.HorizontalEdgesProgressiveBlurLayer
 import java.io.File
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -70,6 +74,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+private val CATEGORIES = listOf(
+    "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo",
+    "Pantalón", "Jeans", "Short", "Falda",
+    "Cabeza", "Calzado", "Vestido", "Bolso", "Accesorio", "Otro"
+)
+private val STYLES = listOf("casual", "formal", "deportiva", "verano", "invierno")
+private val SIZES = listOf("XS", "S", "M", "L", "XL")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,21 +94,19 @@ fun NewGarmentScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     var isSaving by remember { mutableStateOf(false) }
 
     var title by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "") }
     var selectedCategory by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "Camisa") }
     var showCategoryMenu by remember { mutableStateOf(false) }
-    val categories = listOf(
-        "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo",
-        "Pantalón", "Jeans", "Short", "Falda",
-        "Cabeza", "Calzado", "Vestido", "Bolso", "Accesorio", "Otro"
-    )
-    
-    val styles = listOf("casual", "formal", "deportiva", "verano", "invierno")
+    val categories = CATEGORIES
+    val styles = STYLES
     var selectedStyle by remember { mutableStateOf("casual") }
     
-    val colors = if (detectedColors.isNotEmpty()) detectedColors else listOf(Color(0xFF8B2011), Color(0xFFFFB68C))
+    val colors = remember(detectedColors) {
+        if (detectedColors.isNotEmpty()) detectedColors else listOf(Color(0xFF8B2011), Color(0xFFFFB68C))
+    }
     var selectedColor by remember { mutableStateOf(colors.firstOrNull() ?: Color.Gray) }
     
     var estiloEj by remember { mutableStateOf("") }
@@ -180,7 +190,6 @@ fun NewGarmentScreen(
                         .clickable(enabled = !isSaving) { 
                             coroutineScope.launch {
                                 isSaving = true
-                                val sizeList = listOf("XS", "S", "M", "L", "XL")
                                 val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
                                 val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
                                     name = title.ifBlank { selectedCategory },
@@ -188,7 +197,7 @@ fun NewGarmentScreen(
                                     colorHex = hexColor,
                                     style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
                                     brand = marcaEj.ifBlank { null },
-                                    size = sizeList.getOrNull(selectedSizeIndex),
+                                    size = SIZES.getOrNull(selectedSizeIndex),
                                     imageUrl = imagePath
                                 )
                                 try {
@@ -290,7 +299,7 @@ fun NewGarmentScreen(
                         .background(Color(0xFFE0E0E0))
                         .border(1.dp, Color(0xFFBDBDBD), RoundedCornerShape(16.dp))
                 ) {
-                    val file = File(imagePath)
+                    val file = remember(imagePath) { File(imagePath) }
                     if (file.exists()) {
                         AsyncImage(
                             model = Uri.fromFile(file),
@@ -329,54 +338,111 @@ fun NewGarmentScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                val screenWidthDp = configuration.screenWidthDp.dp
+
+                val stylesLayer = rememberGraphicsLayer()
+                Box(
+                    modifier = Modifier
+                        .requiredWidth(screenWidthDp)
+                        .clipToBounds()
                 ) {
-                    items(styles) { style ->
-                        val isSelected = style == selectedStyle
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) Color.Black else Color.Transparent)
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) Color.Transparent else Color(0xFFBDBDBD),
-                                    shape = RoundedCornerShape(50)
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .drawWithContent {
+                                stylesLayer.record {
+                                    this@drawWithContent.drawContent()
+                                }
+                            }
+                            .padding(vertical = 24.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(STYLES) { style ->
+                            val isSelected = style == selectedStyle
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (isSelected) Color.Black else Color.Transparent)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) Color.Transparent else Color(0xFFBDBDBD),
+                                        shape = RoundedCornerShape(50)
+                                    )
+                                    .clickable { selectedStyle = style }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = style,
+                                    color = if (isSelected) Color.White else Color.Gray,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
                                 )
-                                .clickable { selectedStyle = style }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = style,
-                                color = if (isSelected) Color.White else Color.Gray,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                            }
                         }
                     }
+                    
+                    HorizontalEdgesProgressiveBlurLayer(
+                        modifier = Modifier.matchParentSize(),
+                        contentLayer = stylesLayer,
+                        maxBlur = 20f,
+                        edgeWidthFraction = 24f / configuration.screenWidthDp.toFloat()
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(text = "Colores", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         colors.forEach { color ->
                             val isSelected = color == selectedColor
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) Color.Gray else Color.LightGray,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { selectedColor = color }
+                            
+                            val animatedSize by animateDpAsState(
+                                targetValue = if (isSelected) 48.dp else 40.dp,
+                                animationSpec = tween(durationMillis = 200),
+                                label = "colorSize"
                             )
+                            val animatedBorderWidth by animateDpAsState(
+                                targetValue = if (isSelected) 3.dp else 2.dp,
+                                animationSpec = tween(durationMillis = 200),
+                                label = "borderWidth"
+                            )
+                            val animatedBorderColor by animateColorAsState(
+                                targetValue = if (isSelected) Color.Black else Color.LightGray,
+                                animationSpec = tween(durationMillis = 200),
+                                label = "borderColor"
+                            )
+
+                            Box(
+                                modifier = Modifier.size(48.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(animatedSize)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                        .border(
+                                            width = animatedBorderWidth,
+                                            color = animatedBorderColor,
+                                            shape = CircleShape
+                                        )
+                                        .clickable { 
+                                            if (!isSelected) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                selectedColor = color 
+                                            }
+                                        }
+                                        .padding(4.dp)
+                                        .background(color, CircleShape)
+                                )
+                            }
                         }
                     }
                 }
@@ -530,7 +596,7 @@ fun CustomSizeSlider(
     selectedIndex: Int,
     onIndexChanged: (Int) -> Unit
 ) {
-    val sizes = listOf("XS", "S", "M", "L", "XL")
+    val sizes = SIZES
     val haptic = LocalHapticFeedback.current
     val currentSelectedIndex by rememberUpdatedState(selectedIndex)
 
