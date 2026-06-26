@@ -180,20 +180,21 @@ fun NewGarmentScreen(
                         .clickable(enabled = !isSaving) { 
                             coroutineScope.launch {
                                 isSaving = true
+                                val sizeList = listOf("XS", "S", "M", "L", "XL")
+                                val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
+                                val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
+                                    name = title.ifBlank { selectedCategory },
+                                    category = selectedCategory,
+                                    colorHex = hexColor,
+                                    style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
+                                    brand = marcaEj.ifBlank { null },
+                                    size = sizeList.getOrNull(selectedSizeIndex),
+                                    imageUrl = imagePath
+                                )
                                 try {
-                                    val sizeList = listOf("XS", "S", "M", "L", "XL")
-                                    val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
-                                    val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
-                                        name = title.ifBlank { selectedCategory },
-                                        category = selectedCategory,
-                                        colorHex = hexColor,
-                                        style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
-                                        brand = marcaEj.ifBlank { null },
-                                        size = sizeList.getOrNull(selectedSizeIndex),
-                                        imageUrl = imagePath
-                                    )
                                     val response = com.pdm0126.outfix.data.api.RetrofitClient.garmentApi.createGarment(request)
                                     if (response.success) {
+                                        response.data?.let { com.pdm0126.outfix.data.mock.MockDatabase.addGarment(it) }
                                         android.widget.Toast.makeText(context, "Prenda guardada con éxito", android.widget.Toast.LENGTH_SHORT).show()
                                         onSave()
                                     } else {
@@ -201,7 +202,25 @@ fun NewGarmentScreen(
                                     }
                                 } catch (e: Exception) {
                                     android.util.Log.e("NewGarmentScreen", "Error saving garment", e)
-                                    android.widget.Toast.makeText(context, "Error de red", android.widget.Toast.LENGTH_SHORT).show()
+                                    val mockGarment = com.pdm0126.outfix.data.api.dto.GarmentResponse(
+                                        id = java.util.UUID.randomUUID().toString(),
+                                        userId = "dummy",
+                                        name = request.name,
+                                        category = request.category,
+                                        colorHex = request.colorHex,
+                                        colorName = "Detectado",
+                                        style = request.style,
+                                        brand = request.brand ?: "Genérica",
+                                        size = request.size ?: "M",
+                                        status = "AVAILABLE",
+                                        imageUrl = request.imageUrl ?: "",
+                                        notes = "Guardado sin conexión",
+                                        createdAt = "Recién",
+                                        updatedAt = "Recién"
+                                    )
+                                    com.pdm0126.outfix.data.mock.MockDatabase.addGarment(mockGarment)
+                                    android.widget.Toast.makeText(context, "Guardado localmente (Sin red)", android.widget.Toast.LENGTH_SHORT).show()
+                                    onSave()
                                 } finally {
                                     isSaving = false
                                 }
