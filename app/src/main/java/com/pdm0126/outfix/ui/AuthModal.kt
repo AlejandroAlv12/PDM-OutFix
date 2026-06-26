@@ -1,6 +1,7 @@
 package com.pdm0126.outfix.ui
 
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
@@ -41,8 +42,19 @@ fun AuthModal(
     
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    
+    val flipRotation by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isLogin) 0f else 180f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "flip"
+    )
+    val isFlipped = flipRotation > 90f
+    val displayIsLogin = !isFlipped
     
     val transitionState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     transitionState.targetState = isVisible
@@ -117,7 +129,11 @@ fun AuthModal(
         // Modal Card
         Box(
             modifier = Modifier
-                .graphicsLayer { translationX = containerOffsetX }
+                .graphicsLayer { 
+                    translationX = containerOffsetX
+                    rotationY = flipRotation
+                    cameraDistance = 12f * density
+                }
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFFE0E0E0).copy(alpha = 0.95f))
@@ -125,10 +141,13 @@ fun AuthModal(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { rotationY = if (isFlipped) 180f else 0f }
+                    .animateContentSize(animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing))
             ) {
                 
-                if (!isLogin) {
+                if (!displayIsLogin) {
                     TextField(
                         value = username,
                         onValueChange = { username = it },
@@ -141,7 +160,9 @@ fun AuthModal(
                             unfocusedContainerColor = Color.White,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = Color.Black
+                            cursorColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
                         ),
                         singleLine = true
                     )
@@ -160,7 +181,9 @@ fun AuthModal(
                         unfocusedContainerColor = Color.White,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     ),
                     singleLine = true
                 )
@@ -180,18 +203,48 @@ fun AuthModal(
                         unfocusedContainerColor = Color.White,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     ),
                     singleLine = true
                 )
+                
+                if (!displayIsLogin) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    TextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        placeholder = { Text("Repetir contraseña", color = Color.Black.copy(alpha = 0.6f), fontWeight = FontWeight.Bold) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp)),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        ),
+                        singleLine = true
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 // Botón Entrar / Registrarse
                 Button(
                     onClick = {
-                        if (email.isBlank() || password.isBlank() || (!isLogin && username.isBlank())) {
+                        if (email.isBlank() || password.isBlank() || (!isLogin && username.isBlank()) || (!isLogin && confirmPassword.isBlank())) {
                             Toast.makeText(context, "Llena todos los campos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (!isLogin && password != confirmPassword) {
+                            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         if (!isLogin && password.length < 8) {
@@ -245,7 +298,7 @@ fun AuthModal(
                     if (isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(if (isLogin) "Entrar" else "Registrarse", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(if (displayIsLogin) "Entrar" else "Registrarse", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 
@@ -285,9 +338,9 @@ fun AuthModal(
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = if (isLogin) "¿Aun no tienes cuenta? " else "¿Ya tienes cuenta? ", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(text = if (displayIsLogin) "¿Aun no tienes cuenta? " else "¿Ya tienes cuenta? ", color = Color.Black, fontWeight = FontWeight.Bold)
                     Text(
-                        text = if (isLogin) "Crear cuenta" else "Iniciar sesión",
+                        text = if (displayIsLogin) "Crear cuenta" else "Iniciar sesión",
                         color = Color(0xFF1E3A8A),
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
