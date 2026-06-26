@@ -32,6 +32,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -661,10 +662,22 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 val offsetX = with(density) { animLeft.toDp() }
                                 val offsetY = with(density) { animTop.toDp() }
 
+                                var showCorners by remember { mutableStateOf(false) }
+                                LaunchedEffect(Unit) {
+                                    kotlinx.coroutines.delay(400)
+                                    showCorners = true
+                                }
+                                val cornersAlpha by animateFloatAsState(
+                                    targetValue = if (showCorners) 1f else 0f,
+                                    animationSpec = tween(400),
+                                    label = "cornersAlpha"
+                                )
+
                                 ViewfinderCorners(
                                     modifier = Modifier
                                         .absoluteOffset(x = offsetX, y = offsetY)
                                         .size(width = widthDp, height = heightDp)
+                                        .graphicsLayer { alpha = cornersAlpha }
                                 )
                             }
 
