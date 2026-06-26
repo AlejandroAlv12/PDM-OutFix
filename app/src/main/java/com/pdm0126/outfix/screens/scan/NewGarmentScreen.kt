@@ -87,7 +87,8 @@ import kotlin.math.roundToInt
 private val CATEGORIES = listOf(
     "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo",
     "Pantalón", "Jeans", "Short", "Falda",
-    "Gorra", "Sombrero", "Gorro", "Zapatillas", "Botas", "Zapatos", "Vestido", "Bolso", "Mochila", "Accesorio", "Otro"
+    "Gorra", "Sombrero", "Gorro", "Zapatillas", "Botas", "Zapatos", "Vestido", "Bolso", "Mochila", 
+    "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otro"
 )
 private val STYLES = listOf("casual", "formal", "deportiva", "verano", "invierno")
 private val SIZES = listOf("XS", "S", "M", "L", "XL")
@@ -506,7 +507,7 @@ fun NewGarmentScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                if (selectedCategory !in listOf("Zapatillas", "Botas", "Zapatos", "Bolso", "Mochila", "Gorra", "Sombrero", "Gorro")) {
+                if (selectedCategory !in listOf("Zapatillas", "Botas", "Zapatos", "Bolso", "Mochila", "Gorra", "Sombrero", "Gorro", "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio")) {
                     CustomSizeSlider(
                         selectedIndex = selectedSizeIndex,
                         onIndexChanged = { selectedSizeIndex = it }

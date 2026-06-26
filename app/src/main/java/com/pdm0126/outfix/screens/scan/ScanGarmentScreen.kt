@@ -1117,6 +1117,18 @@ fun processCapturedImageData(
                 category = "Pantalón"
             } else if (foundLabels.any { it in listOf("dress") }) {
                 category = "Vestido"
+            } else if (foundLabels.any { it in listOf("glasses", "sunglasses") }) {
+                category = "Gafas"
+            } else if (foundLabels.any { it in listOf("watch", "wristwatch") }) {
+                category = "Reloj"
+            } else if (foundLabels.any { it in listOf("belt") }) {
+                category = "Cinturón"
+            } else if (foundLabels.any { it in listOf("tie") }) {
+                category = "Corbata"
+            } else if (foundLabels.any { it in listOf("scarf") }) {
+                category = "Bufanda"
+            } else if (foundLabels.any { it in listOf("necklace", "ring", "earring", "jewelry") }) {
+                category = "Joyería"
             } else if (foundLabels.any { it in listOf("backpack") }) {
                 category = "Mochila"
             } else if (foundLabels.any { it in listOf("bag", "handbag") }) {

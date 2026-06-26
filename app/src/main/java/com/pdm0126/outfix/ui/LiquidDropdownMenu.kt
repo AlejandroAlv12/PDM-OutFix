@@ -19,11 +19,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -175,7 +178,7 @@ fun LiquidDropdownOverlay(
             ) {
                 scale(scaleX = 1f / menuScale, scaleY = 1f / menuScale, pivot = Offset(size.width / 2f, 0f)) {
                     if (screenCoords?.isAttached == true) {
-                        val screenPos = screenCoords.positionInRoot()
+                        val screenPos = screenCoords!!.positionInRoot()
                         val unscaledX = currentX.toPx()
                         val unscaledY = yOffset.toPx()
                         translate(left = -(unscaledX - screenPos.x), top = -(unscaledY - screenPos.y)) {
@@ -253,7 +256,8 @@ fun LiquidDropdownOverlay(
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 8.dp)
                 ) {
-                    items.forEach { item ->
+                    val sortedItems = remember(items) { items.sorted() }
+                    sortedItems.forEach { item ->
                         Text(
                             text = item,
                             modifier = Modifier
