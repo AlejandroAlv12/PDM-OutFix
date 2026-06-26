@@ -123,6 +123,15 @@ fun LoginScreen(
                         } else {
                             Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
                         }
+                    } catch (e: retrofit2.HttpException) {
+                        try {
+                            val errorJson = e.response()?.errorBody()?.string()
+                            val jsonObject = org.json.JSONObject(errorJson ?: "")
+                            val msg = jsonObject.optString("message", "Error al iniciar sesión (${e.code()})")
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        } catch (parseException: Exception) {
+                            Toast.makeText(context, "Error al iniciar sesión (${e.code()})", Toast.LENGTH_SHORT).show()
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                         Toast.makeText(context, "Error de red al iniciar sesión", Toast.LENGTH_SHORT).show()

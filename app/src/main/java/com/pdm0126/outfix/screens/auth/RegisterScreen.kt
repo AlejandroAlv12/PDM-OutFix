@@ -125,6 +125,10 @@ fun RegisterScreen(
                     Toast.makeText(context, "Llena todos los campos", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+                if (password.length < 8) {
+                    Toast.makeText(context, "La contraseña debe tener al menos 8 caracteres", Toast.LENGTH_LONG).show()
+                    return@Button
+                }
                 
                 coroutineScope.launch {
                     isLoading = true
@@ -142,6 +146,15 @@ fun RegisterScreen(
                             onRegisterSuccess()
                         } else {
                             Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: retrofit2.HttpException) {
+                        try {
+                            val errorJson = e.response()?.errorBody()?.string()
+                            val jsonObject = org.json.JSONObject(errorJson ?: "")
+                            val msg = jsonObject.optString("message", "Error al registrar (${e.code()})")
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        } catch (parseException: Exception) {
+                            Toast.makeText(context, "Error al registrar (${e.code()})", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

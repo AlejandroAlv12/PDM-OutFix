@@ -13,9 +13,9 @@ import okhttp3.Response
 
 object RetrofitClient {
 
-    // 192.168.1.41 es la IP actual de tu Mac en tu red Wi-Fi para que el celular pueda conectarse.
+    // La IP se carga desde local.properties a través de BuildConfig para mayor seguridad.
     // IMPORTANTE: Tu celular y tu Mac deben estar conectados a la misma red Wi-Fi.
-    private const val BASE_URL = "http://192.168.1.7:8080/"
+    private const val BASE_URL = com.pdm0126.outfix.BuildConfig.BASE_URL
 
     private val json = Json {
         ignoreUnknownKeys = true
