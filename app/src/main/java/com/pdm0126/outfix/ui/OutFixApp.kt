@@ -1,11 +1,8 @@
 package com.pdm0126.outfix.ui
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
@@ -42,7 +39,6 @@ import com.pdm0126.outfix.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
 import android.os.Build
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import com.pdm0126.outfix.screens.home.HomeScreen
 import com.pdm0126.outfix.screens.laundry.LaundryScreen
 import com.pdm0126.outfix.screens.planner.WeeklyPlannerScreen
@@ -52,19 +48,14 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.foundation.gestures.scrollBy
 import kotlin.math.roundToInt
 
@@ -120,6 +111,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     val bottomPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     var showAuthModal by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     val authTransition = androidx.compose.animation.core.updateTransition(
         targetState = showAuthModal, 
@@ -216,7 +208,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                     OutFixScreen.Closet -> ClosetScreen()
                     OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
                     OutFixScreen.Laundry -> LaundryScreen()
-                    OutFixScreen.Profile -> ProfileScreen(onLogout = onLogout, onShowAuth = { showAuthModal = true })
+                    OutFixScreen.Profile -> ProfileScreen(onLogoutClick = { showLogoutDialog = true }, onShowAuth = { showAuthModal = true })
                 }
             }
 
@@ -237,7 +229,16 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 )
             }
             
-            // Auth modal overlay removed from here
+            com.pdm0126.outfix.screens.profile.LogoutDialogOverlay(
+                showLogoutDialog = showLogoutDialog,
+                onDismiss = { showLogoutDialog = false },
+                onConfirm = { 
+                    showLogoutDialog = false
+                    onLogout()
+                },
+                appBackgroundLayer = backgroundLayer,
+                pagerCoords = pagerCoords
+            )
         }
     }
 
