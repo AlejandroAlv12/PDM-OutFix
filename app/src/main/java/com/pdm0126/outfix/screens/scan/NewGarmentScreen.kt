@@ -592,8 +592,8 @@ fun NewGarmentScreen(
                             .liquidGlass(
                                 blur = 30f,
                                 saturation = 1.4f,
-                                refraction = 0.6f,
-                                curve = 0.08f,
+                                refraction = 0.5f,
+                                curve = 0.05f,
                                 dispersion = 0.25f,
                                 normalizedRadius = 0.15f
                             )
@@ -613,7 +613,7 @@ fun NewGarmentScreen(
                     Box(modifier = Modifier.matchParentSize().background(Color.White))
                 }
                 
-                val overlayColor = Color.White.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
+                val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
                 val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
                 Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
 
@@ -642,7 +642,7 @@ fun NewGarmentScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val textColor = androidx.compose.ui.graphics.lerp(Color.White, Color.Black, menuProgress)
+                        val textColor = Color.White
                         Text(text = selectedCategory, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(8.dp))
                         androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
@@ -659,7 +659,7 @@ fun NewGarmentScreen(
                         }
                     }
 
-                    HorizontalDivider(color = Color.Black.copy(alpha = 0.1f * menuProgress))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f * menuProgress))
                     val categoriesLayer = rememberGraphicsLayer()
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Column(
@@ -684,7 +684,7 @@ fun NewGarmentScreen(
                                             showCategoryMenu = false
                                         }
                                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    color = Color.Black.copy(alpha = menuProgress),
+                                    color = Color.White.copy(alpha = menuProgress),
                                     fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 14.sp,
                                     textAlign = TextAlign.Center
