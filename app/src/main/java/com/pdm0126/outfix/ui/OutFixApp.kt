@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.platform.LocalConfiguration
@@ -251,6 +252,24 @@ fun MainScreen() {
                 label = "fabNormalizedRadius"
             )
 
+            val fabInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val isFabPressed by fabInteractionSource.collectIsPressedAsState()
+            
+            val fabPressScale by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isFabPressed && !isFabExpanded) 1.08f else 1f,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                ),
+                label = "fabPressScale"
+            )
+
+            LaunchedEffect(isFabPressed) {
+                if (isFabPressed && !isFabExpanded) {
+                    hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                }
+            }
+
             androidx.compose.animation.AnimatedVisibility(
                 visible = isHome || isFabExpanded,
                 enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
@@ -269,13 +288,16 @@ fun MainScreen() {
                                 fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
                             }
                         }
+                        .graphicsLayer {
+                            scaleX = fabPressScale
+                            scaleY = fabPressScale
+                        }
                         .clip(RoundedCornerShape(fabCornerRadius))
                         .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            interactionSource = fabInteractionSource,
                             indication = null
                         ) { 
                             if (!isFabExpanded) {
-                                hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                 showScanner = true 
                             }
                         },
