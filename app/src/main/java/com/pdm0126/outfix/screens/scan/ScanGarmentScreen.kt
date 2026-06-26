@@ -320,7 +320,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     val captureImage = {
         isProcessing = true
         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-        val file = File(context.cacheDir, "cropped_garment.png")
+        val file = File(context.cacheDir, "cropped_garment_${System.currentTimeMillis()}.png")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
         imageCapture.takePicture(
