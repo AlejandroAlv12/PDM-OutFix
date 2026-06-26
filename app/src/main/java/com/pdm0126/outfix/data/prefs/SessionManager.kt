@@ -14,8 +14,12 @@ class SessionManager(context: Context) {
         private const val KEY_USER_DISPLAY_NAME = "user_display_name"
     }
 
+    private val _sessionState = kotlinx.coroutines.flow.MutableStateFlow(fetchAuthToken() != null)
+    val sessionState: kotlinx.coroutines.flow.StateFlow<Boolean> = _sessionState
+
     fun saveAuthToken(token: String) {
         prefs.edit().putString(KEY_USER_TOKEN, token).apply()
+        _sessionState.value = true
     }
 
     fun fetchAuthToken(): String? {
@@ -48,5 +52,6 @@ class SessionManager(context: Context) {
 
     fun clearSession() {
         prefs.edit().clear().apply()
+        _sessionState.value = false
     }
 }

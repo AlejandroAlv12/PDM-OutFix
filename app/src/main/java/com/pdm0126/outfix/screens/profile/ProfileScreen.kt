@@ -22,10 +22,12 @@ import com.pdm0126.outfix.data.api.RetrofitClient
 @Composable
 fun ProfileScreen(onLogout: () -> Unit, onShowAuth: () -> Unit = {}) {
     val sessionManager = RetrofitClient.sessionManager
-    val hasSession = sessionManager?.fetchAuthToken() != null
     
-    val displayName = sessionManager?.fetchUserDisplayName() ?: "Usuario"
-    val email = sessionManager?.fetchUserEmail() ?: "correo@ejemplo.com"
+    val hasSession by sessionManager?.sessionState?.collectAsState(initial = sessionManager.fetchAuthToken() != null) 
+        ?: remember { mutableStateOf(false) }
+    
+    val displayName = if (hasSession) sessionManager?.fetchUserDisplayName() ?: "Usuario" else "Usuario"
+    val email = if (hasSession) sessionManager?.fetchUserEmail() ?: "correo@ejemplo.com" else "correo@ejemplo.com"
 
     Column(
         modifier = Modifier
