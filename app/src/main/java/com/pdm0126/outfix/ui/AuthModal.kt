@@ -52,14 +52,14 @@ fun AuthModal(
             modifier = Modifier
                 .size(100.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFFE53935)),
-            contentAlignment = Alignment.Center
+                .background(Color.White)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Checkroom,
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.pdm0126.outfix.R.drawable.logo),
                 contentDescription = "Logo",
-                tint = Color.White,
-                modifier = Modifier.size(60.dp)
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxSize()
             )
         }
         
