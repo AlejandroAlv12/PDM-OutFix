@@ -7,12 +7,15 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
+import com.pdm0126.outfix.data.prefs.SessionManager
+import okhttp3.Interceptor
+import okhttp3.Response
 
 object RetrofitClient {
 
     // 192.168.1.41 es la IP actual de tu Mac en tu red Wi-Fi para que el celular pueda conectarse.
     // IMPORTANTE: Tu celular y tu Mac deben estar conectados a la misma red Wi-Fi.
-    private const val BASE_URL = "http://192.168.1.41:8080/"
+    private const val BASE_URL = "http://192.168.1.7:8080/"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -24,8 +27,19 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
+    var sessionManager: SessionManager? = null
+
+    private val authInterceptor = Interceptor { chain ->
+        val requestBuilder = chain.request().newBuilder()
+        sessionManager?.fetchAuthToken()?.let { token ->
+            requestBuilder.addHeader("Authorization", "Bearer $token")
+        }
+        chain.proceed(requestBuilder.build())
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        .addInterceptor(authInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -38,5 +52,9 @@ object RetrofitClient {
 
     val garmentApi: GarmentApi by lazy {
         retrofit.create(GarmentApi::class.java)
+    }
+
+    val authApi: AuthApi by lazy {
+        retrofit.create(AuthApi::class.java)
     }
 }

@@ -14,6 +14,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pdm0126.outfix.ui.theme.OutFixTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.pdm0126.outfix.data.api.RetrofitClient
+import com.pdm0126.outfix.data.prefs.SessionManager
+import com.pdm0126.outfix.screens.auth.LoginScreen
+import com.pdm0126.outfix.screens.auth.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,9 +31,30 @@ class MainActivity : ComponentActivity() {
                 Color.TRANSPARENT, Color.TRANSPARENT
             )
         )
+        
+        val sessionManager = SessionManager(this)
+        RetrofitClient.sessionManager = sessionManager
+
         setContent {
+            var currentScreen by remember { mutableStateOf(if (sessionManager.fetchAuthToken() != null) "main" else "login") }
+
             OutFixTheme(darkTheme = true) {
-                MainScreen()
+                when (currentScreen) {
+                    "main" -> MainScreen(
+                        onLogout = {
+                            sessionManager.clearSession()
+                            currentScreen = "login"
+                        }
+                    )
+                    "login" -> LoginScreen(
+                        onLoginSuccess = { currentScreen = "main" },
+                        onNavigateToRegister = { currentScreen = "register" }
+                    )
+                    "register" -> RegisterScreen(
+                        onRegisterSuccess = { currentScreen = "main" },
+                        onNavigateToLogin = { currentScreen = "login" }
+                    )
+                }
             }
         }
     }
