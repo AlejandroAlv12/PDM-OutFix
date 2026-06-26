@@ -258,7 +258,11 @@ fun AuthModal(
                                 val response = if (isLogin) {
                                     RetrofitClient.authApi.login(LoginRequest(email.trim(), password))
                                 } else {
-                                    RetrofitClient.authApi.register(RegisterRequest(username.trim(), email.trim(), password))
+                                    RetrofitClient.authApi.register(RegisterRequest(
+                                        email = email.trim(), 
+                                        password = password, 
+                                        displayName = username.trim()
+                                    ))
                                 }
                                 
                                 if (response.success && response.data != null) {
