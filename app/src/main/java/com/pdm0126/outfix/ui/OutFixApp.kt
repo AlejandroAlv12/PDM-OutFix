@@ -18,6 +18,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -252,24 +258,6 @@ fun MainScreen() {
                 label = "fabNormalizedRadius"
             )
 
-            val fabInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            val isFabPressed by fabInteractionSource.collectIsPressedAsState()
-            
-            val fabPressScale by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isFabPressed && !isFabExpanded) 1.08f else 1f,
-                animationSpec = androidx.compose.animation.core.spring(
-                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                ),
-                label = "fabPressScale"
-            )
-
-            LaunchedEffect(isFabPressed) {
-                if (isFabPressed && !isFabExpanded) {
-                    hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                }
-            }
-
             androidx.compose.animation.AnimatedVisibility(
                 visible = isHome || isFabExpanded,
                 enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
@@ -280,6 +268,17 @@ fun MainScreen() {
                     .align(Alignment.BottomEnd)
                     .padding(end = fabPaddingEnd, bottom = fabPaddingBottom)
             ) {
+                var isFabPressedInstant by remember { mutableStateOf(false) }
+                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+                val fabScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isFabPressedInstant && !isFabExpanded) 1.08f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = 400f
+                    ),
+                    label = "fabGlassScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .size(width = fabWidth, height = fabHeight)
@@ -289,18 +288,30 @@ fun MainScreen() {
                             }
                         }
                         .graphicsLayer {
-                            scaleX = fabPressScale
-                            scaleY = fabPressScale
+                            scaleX = fabScale
+                            scaleY = fabScale
                         }
-                        .clip(RoundedCornerShape(fabCornerRadius))
+                        .pointerInput(!isFabExpanded) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                if (!isFabExpanded) {
+                                    isFabPressedInstant = true
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    waitForUpOrCancellation()
+                                    isFabPressedInstant = false
+                                }
+                            }
+                        }
                         .clickable(
-                            interactionSource = fabInteractionSource,
-                            indication = null
-                        ) { 
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            enabled = !isFabExpanded
+                        ) {
                             if (!isFabExpanded) {
                                 showScanner = true 
                             }
-                        },
+                        }
+                        .clip(RoundedCornerShape(fabCornerRadius)),
                     contentAlignment = Alignment.Center
                 ) {
                 val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(
@@ -325,8 +336,14 @@ fun MainScreen() {
                                 normalizedRadius = fabNormalizedRadius
                             )
                         ) {
-                            translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
-                                drawLayer(backgroundLayer)
+                            scale(
+                                scaleX = 1f / fabScale,
+                                scaleY = 1f / fabScale,
+                                pivot = center
+                            ) {
+                                translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
+                                    drawLayer(backgroundLayer)
+                                }
                             }
                         }
                     } else {

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.ui.zIndex
 
 import com.pdm0126.outfix.ui.liquidGlass
+import com.pdm0126.outfix.ui.bouncyClickable
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.draw.drawWithContent
@@ -161,9 +162,9 @@ fun NewGarmentScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .bouncyClickable { onBack() }
                         .clip(CircleShape)
-                        .background(Color(0xFFBDBDBD))
-                        .clickable { onBack() },
+                        .background(Color(0xFFBDBDBD)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -185,9 +186,7 @@ fun NewGarmentScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
-                        .background(if (isSaving) Color.Gray else LimeGreen.copy(alpha = 0.5f))
-                        .clickable(enabled = !isSaving) { 
+                        .bouncyClickable(enabled = !isSaving) { 
                             coroutineScope.launch {
                                 isSaving = true
                                 val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
@@ -234,7 +233,9 @@ fun NewGarmentScreen(
                                     isSaving = false
                                 }
                             }
-                        },
+                        }
+                        .clip(CircleShape)
+                        .background(if (isSaving) Color.Gray else LimeGreen.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isSaving) {

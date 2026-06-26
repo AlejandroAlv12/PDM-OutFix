@@ -33,7 +33,14 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.drawscope.scale
 import com.pdm0126.outfix.ui.liquidGlass
+import com.pdm0126.outfix.ui.bouncyClickable
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -168,6 +175,17 @@ fun ClosetScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 var buttonOffset by remember { mutableStateOf(Offset.Zero) }
+                var isPressedInstant by remember { mutableStateOf(false) }
+                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+                val buttonScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isPressedInstant) 1.08f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = 400f
+                    ),
+                    label = "glassButtonScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -181,8 +199,24 @@ fun ClosetScreen() {
                                 }
                             }
                         }
-                        .clip(RoundedCornerShape(percent = 50))
-                        .clickable { /* TODO: Show success message or save outfit */ },
+                        .graphicsLayer {
+                            scaleX = buttonScale
+                            scaleY = buttonScale
+                        }
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                isPressedInstant = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                waitForUpOrCancellation()
+                                isPressedInstant = false
+                            }
+                        }
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) { /* TODO: Show success message or save outfit */ }
+                        .clip(RoundedCornerShape(percent = 50)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (android.os.Build.VERSION.SDK_INT >= 31) {
@@ -196,8 +230,14 @@ fun ClosetScreen() {
                                 normalizedRadius = 0.5f
                             )
                         ) {
-                            translate(left = -buttonOffset.x, top = -buttonOffset.y) {
-                                drawLayer(slidersLayer)
+                            scale(
+                                scaleX = 1f / buttonScale,
+                                scaleY = 1f / buttonScale,
+                                pivot = center
+                            ) {
+                                translate(left = -buttonOffset.x, top = -buttonOffset.y) {
+                                    drawLayer(slidersLayer)
+                                }
                             }
                         }
                     } else {

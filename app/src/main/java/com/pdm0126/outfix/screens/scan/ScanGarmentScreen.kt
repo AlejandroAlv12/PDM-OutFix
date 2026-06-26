@@ -72,6 +72,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.pdm0126.outfix.ui.bouncyClickable
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
@@ -319,7 +320,6 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
 
     val captureImage = {
         isProcessing = true
-        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
         val file = File(context.cacheDir, "cropped_garment_${System.currentTimeMillis()}.png")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
@@ -447,9 +447,9 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         modifier = Modifier
                             .size(40.dp)
                             .align(Alignment.CenterStart)
+                            .bouncyClickable { onClose() }
                             .clip(CircleShape)
-                            .background(Color(0xFFBDBDBD))
-                            .clickable { onClose() },
+                            .background(Color(0xFFBDBDBD)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -471,10 +471,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                     var showInfo by remember { mutableStateOf(false) }
                     val cornerRadius by animateDpAsState(
                         targetValue = if (showInfo) 24.dp else 20.dp,
-                        animationSpec = spring(
-                            dampingRatio = 0.65f,
-                            stiffness = 200f
-                        ),
+                        animationSpec = tween(300),
                         label = "cornerRadius"
                     )
                     val bgColor by animateColorAsState(
@@ -492,6 +489,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .widthIn(min = 40.dp, max = 280.dp)
+                            .bouncyClickable { showInfo = !showInfo }
                             .shadow(
                                 elevation = elevation, 
                                 shape = RoundedCornerShape(cornerRadius),
@@ -501,15 +499,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                             .clip(RoundedCornerShape(cornerRadius))
                             .background(bgColor)
                             .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = 0.65f,
-                                    stiffness = 200f
-                                )
+                                animationSpec = tween(300)
                             )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { showInfo = !showInfo }
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -717,9 +708,9 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
+                                .bouncyClickable { galleryLauncher.launch("image/*") }
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(Color(0xFFBDBDBD))
-                                .clickable { galleryLauncher.launch("image/*") }
                         ) {
                             if (latestGalleryUri != null) {
                                 AsyncImage(
@@ -734,19 +725,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         Box(
                             modifier = Modifier
                                 .size(80.dp)
+                                .bouncyClickable { captureImage() }
                                 .border(4.dp, Color.Gray, CircleShape)
                                 .padding(6.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF4A4A4A))
-                                .clickable { captureImage() }
                         )
 
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
+                                .bouncyClickable { isFlashEnabled = !isFlashEnabled }
                                 .clip(CircleShape)
-                                .background(if (isFlashEnabled) Color(0xFFFFC107) else Color(0xFFE0E0E0))
-                                .clickable { isFlashEnabled = !isFlashEnabled },
+                                .background(if (isFlashEnabled) Color(0xFFFFC107) else Color(0xFFE0E0E0)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
