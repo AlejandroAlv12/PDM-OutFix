@@ -60,7 +60,7 @@ object MockDatabase {
             id = UUID.randomUUID().toString(),
             userId = dummyUserId,
             name = "Zapatillas Deportivas",
-            category = "Calzado",
+            category = "Zapatillas",
             colorHex = "#FAFAFA",
             colorName = "Blanco",
             style = "deportivo",

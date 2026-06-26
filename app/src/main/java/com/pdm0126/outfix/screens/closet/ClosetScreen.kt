@@ -101,8 +101,8 @@ fun ClosetScreen() {
 
                 val tops = garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") }
                 val bottoms = garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") }
-                val shoes = garments.filter { it.category == "Calzado" }
-                val headwear = garments.filter { it.category in listOf("Gorra", "Sombrero", "Cabeza") }
+                val shoes = garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") }
+                val headwear = garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") }
                 val accessories = garments.filter { it.category in listOf("Bolso", "Reloj", "Accesorio", "Otros", "Otro") }
 
                 CategorySlider(

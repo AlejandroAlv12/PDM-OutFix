@@ -1083,10 +1083,18 @@ fun processCapturedImageData(
             var category = "Desconocido"
             val foundLabels = labels.map { it.text.lowercase() }
             
-            if (foundLabels.any { it in listOf("hat", "cap", "beanie", "fedora", "sombrero") }) {
-                category = "Cabeza"
-            } else if (foundLabels.any { it in listOf("shoe", "footwear", "sneaker", "boot") }) {
-                category = "Calzado"
+            if (foundLabels.any { it in listOf("cap") }) {
+                category = "Gorra"
+            } else if (foundLabels.any { it in listOf("hat", "fedora", "sombrero") }) {
+                category = "Sombrero"
+            } else if (foundLabels.any { it in listOf("beanie") }) {
+                category = "Gorro"
+            } else if (foundLabels.any { it in listOf("sneaker") }) {
+                category = "Zapatillas"
+            } else if (foundLabels.any { it in listOf("boot") }) {
+                category = "Botas"
+            } else if (foundLabels.any { it in listOf("shoe", "footwear") }) {
+                category = "Zapatos"
             } else if (foundLabels.any { it in listOf("sweater") }) {
                 category = "Suéter"
             } else if (foundLabels.any { it in listOf("jacket") }) {
@@ -1109,7 +1117,9 @@ fun processCapturedImageData(
                 category = "Pantalón"
             } else if (foundLabels.any { it in listOf("dress") }) {
                 category = "Vestido"
-            } else if (foundLabels.any { it in listOf("bag", "handbag", "backpack") }) {
+            } else if (foundLabels.any { it in listOf("backpack") }) {
+                category = "Mochila"
+            } else if (foundLabels.any { it in listOf("bag", "handbag") }) {
                 category = "Bolso"
             }
             
