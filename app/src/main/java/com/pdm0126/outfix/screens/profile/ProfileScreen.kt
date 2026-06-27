@@ -183,6 +183,7 @@ fun LogoutDialogOverlay(
                             .liquidGlass(
                                 blur = 30f,
                                 refraction = 0.9f,
+                                saturation = 0.5f,
                                 edge = 1.5f,
                                 normalizedRadius = 0.15f
                             )
