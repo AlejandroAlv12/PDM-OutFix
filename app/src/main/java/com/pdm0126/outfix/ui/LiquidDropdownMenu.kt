@@ -64,13 +64,13 @@ fun LiquidDropdownButton(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = selectedItem, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.width(8.dp))
-            androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 12.dp, height = 7.dp)) {
                 val strokeWidth = 2.dp.toPx()
-                val startX = 4.dp.toPx()
-                val endX = 14.dp.toPx()
-                val centerX = 9.dp.toPx()
-                val topY = 5.dp.toPx()
-                val bottomY = 10.dp.toPx()
+                val startX = 1.dp.toPx()
+                val centerX = 6.dp.toPx()
+                val endX = 11.dp.toPx()
+                val topY = 1.dp.toPx()
+                val bottomY = 6.dp.toPx()
                 drawLine(
                     color = Color.White,
                     start = Offset(startX, topY),
@@ -227,13 +227,13 @@ fun LiquidDropdownOverlay(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 12.dp, height = 7.dp)) {
                     val strokeWidth = 2.dp.toPx()
-                    val startX = 4.dp.toPx()
-                    val endX = 14.dp.toPx()
-                    val centerX = 9.dp.toPx()
-                    val topY = 5.dp.toPx()
-                    val bottomY = 10.dp.toPx()
+                    val startX = 1.dp.toPx()
+                    val centerX = 6.dp.toPx()
+                    val endX = 11.dp.toPx()
+                    val topY = 1.dp.toPx()
+                    val bottomY = 6.dp.toPx()
                     val outerY = androidx.compose.ui.util.lerp(topY, bottomY, menuProgress)
                     val innerY = androidx.compose.ui.util.lerp(bottomY, topY, menuProgress)
                     drawLine(color = textColor, start = Offset(startX, outerY), end = Offset(centerX, innerY), strokeWidth = strokeWidth, cap = StrokeCap.Round)
