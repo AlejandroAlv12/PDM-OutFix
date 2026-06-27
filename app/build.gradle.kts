@@ -26,7 +26,7 @@ android {
         if (localPropertiesFile.exists()) {
             localProperties.load(FileInputStream(localPropertiesFile))
         }
-        val rawBackendUrl = localProperties.getProperty("BACKEND_URL") ?: "http://10.0.2.2:8080/"
+        val rawBackendUrl = localProperties.getProperty("BACKEND_URL")?.replace("\"", "")?.replace("'", "") ?: "http://10.0.2.2:8080/"
         
         buildConfigField("String", "BASE_URL", "\"$rawBackendUrl\"")
     }
