@@ -10,7 +10,14 @@
 .DS_Store
 /build
 /captures
+/outfix.db
 .externalNativeBuild
 .cxx
 local.properties
+
+# Databases
 *.db
+*.sqlite
+
+# Build caches
+*.bin

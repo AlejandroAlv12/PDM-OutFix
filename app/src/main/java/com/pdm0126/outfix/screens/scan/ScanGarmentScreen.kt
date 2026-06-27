@@ -32,6 +32,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -48,7 +49,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -69,6 +73,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.pdm0126.outfix.ui.bouncyClickable
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
@@ -212,6 +217,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     var isFlashEnabled by remember { mutableStateOf(false) }
     
     var trackingData by remember { mutableStateOf<TrackingData?>(null) }
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(trackingData != null) {
+        if (trackingData != null) {
+            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        }
+    }
+    
+    var isProcessing by remember { mutableStateOf(false) }
+    val handleImageCaptured = { path: String, category: String, colors: List<androidx.compose.ui.graphics.Color> ->
+        isProcessing = false
+        onImageCaptured(path, category, colors)
+    }
+
     val imageCapture = remember { ImageCapture.Builder().build() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -231,6 +249,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             if (uri != null) {
+                isProcessing = true
                 coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -263,12 +282,12 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(copyBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
@@ -276,10 +295,11 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 val out = FileOutputStream(file)
                                 copyBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(copyBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(copyBitmap, file.absolutePath, handleImageCaptured)
                             }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        isProcessing = false
                     }
                 }
             }
@@ -298,11 +318,10 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
         }
     }
 
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     val captureImage = {
-        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-        val file = File(context.cacheDir, "cropped_garment.png")
+        isProcessing = true
+        val file = File(context.cacheDir, "cropped_garment_${System.currentTimeMillis()}.png")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
         imageCapture.takePicture(
@@ -352,19 +371,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(croppedBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
                                 val out = FileOutputStream(file)
                                 croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(croppedBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(croppedBitmap, file.absolutePath, handleImageCaptured)
                             }
                     } else {
                         val segmenterOptions = SubjectSegmenterOptions.Builder().enableForegroundBitmap().build()
@@ -378,41 +397,45 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     val straightBitmap = straightenBitmap(fgBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 } else {
                                     val straightBitmap = straightenBitmap(uprightBitmap)
                                     straightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                     out.close()
-                                    processCapturedImageData(straightBitmap, file.absolutePath, onImageCaptured)
+                                    processCapturedImageData(straightBitmap, file.absolutePath, handleImageCaptured)
                                 }
                             }
                             .addOnFailureListener {
                                 val out = FileOutputStream(file)
                                 uprightBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                                 out.close()
-                                processCapturedImageData(uprightBitmap, file.absolutePath, onImageCaptured)
+                                processCapturedImageData(uprightBitmap, file.absolutePath, handleImageCaptured)
                             }
                     }
                 }
 
                 override fun onError(exc: ImageCaptureException) {
                     Log.e("ScanGarmentScreen", "Error al capturar la foto", exc)
+                    isProcessing = false
                 }
             }
         )
     }
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color(0xFFF5F5F5)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val blurRadius by animateDpAsState(
+                targetValue = if (isProcessing) 16.dp else 0.dp,
+                animationSpec = tween(300),
+                label = "blurRadius"
+            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .blur(blurRadius)
                     .padding(top = 24.dp, bottom = 40.dp)
             ) {
                 Box(
@@ -425,9 +448,9 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         modifier = Modifier
                             .size(40.dp)
                             .align(Alignment.CenterStart)
+                            .bouncyClickable { onClose() }
                             .clip(CircleShape)
-                            .background(Color(0xFFBDBDBD))
-                            .clickable { onClose() },
+                            .background(Color(0xFFBDBDBD)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -449,10 +472,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                     var showInfo by remember { mutableStateOf(false) }
                     val cornerRadius by animateDpAsState(
                         targetValue = if (showInfo) 24.dp else 20.dp,
-                        animationSpec = spring(
-                            dampingRatio = 0.65f,
-                            stiffness = 200f
-                        ),
+                        animationSpec = tween(300),
                         label = "cornerRadius"
                     )
                     val bgColor by animateColorAsState(
@@ -470,6 +490,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .widthIn(min = 40.dp, max = 280.dp)
+                            .bouncyClickable { showInfo = !showInfo }
                             .shadow(
                                 elevation = elevation, 
                                 shape = RoundedCornerShape(cornerRadius),
@@ -479,15 +500,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                             .clip(RoundedCornerShape(cornerRadius))
                             .background(bgColor)
                             .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = 0.65f,
-                                    stiffness = 200f
-                                )
+                                animationSpec = tween(300)
                             )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { showInfo = !showInfo }
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -518,27 +532,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         modifier = Modifier.padding(bottom = 12.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFFE3F2FD)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Info,
-                                                contentDescription = null,
-                                                tint = Color(0xFF2196F3),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Icon(
+                                            imageVector = Icons.Rounded.Info,
+                                            contentDescription = null,
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                         Text(
-                                            text = "Recomendaciones",
+                                            text = "Consejo para escanear",
                                             color = Color.Black,
-                                            fontWeight = FontWeight.ExtraBold,
+                                            fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp
                                         )
                                     }
@@ -604,11 +610,12 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                         fontSize = 14.sp
                                     )
                                 }
-
-
                             } else {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("Se requiere permiso de cámara para escanear", color = Color.Gray, fontWeight = FontWeight.Medium)
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No hay acceso a la cámara", color = Color.Gray, fontWeight = FontWeight.Medium)
                                 }
                             }
                             
@@ -655,10 +662,22 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 val offsetX = with(density) { animLeft.toDp() }
                                 val offsetY = with(density) { animTop.toDp() }
 
+                                var showCorners by remember { mutableStateOf(false) }
+                                LaunchedEffect(Unit) {
+                                    kotlinx.coroutines.delay(400)
+                                    showCorners = true
+                                }
+                                val cornersAlpha by animateFloatAsState(
+                                    targetValue = if (showCorners) 1f else 0f,
+                                    animationSpec = tween(400),
+                                    label = "cornersAlpha"
+                                )
+
                                 ViewfinderCorners(
                                     modifier = Modifier
                                         .absoluteOffset(x = offsetX, y = offsetY)
                                         .size(width = widthDp, height = heightDp)
+                                        .graphicsLayer { alpha = cornersAlpha }
                                 )
                             }
 
@@ -702,9 +721,9 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
+                                .bouncyClickable { galleryLauncher.launch("image/*") }
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(Color(0xFFBDBDBD))
-                                .clickable { galleryLauncher.launch("image/*") }
                         ) {
                             if (latestGalleryUri != null) {
                                 AsyncImage(
@@ -719,19 +738,19 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         Box(
                             modifier = Modifier
                                 .size(80.dp)
+                                .bouncyClickable { captureImage() }
                                 .border(4.dp, Color.Gray, CircleShape)
                                 .padding(6.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF4A4A4A))
-                                .clickable { captureImage() }
                         )
 
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
+                                .bouncyClickable { isFlashEnabled = !isFlashEnabled }
                                 .clip(CircleShape)
-                                .background(if (isFlashEnabled) Color(0xFFFFC107) else Color(0xFFE0E0E0))
-                                .clickable { isFlashEnabled = !isFlashEnabled },
+                                .background(if (isFlashEnabled) Color(0xFFFFC107) else Color(0xFFE0E0E0)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -740,6 +759,42 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 tint = if (isFlashEnabled) Color.White else Color(0xFF757575)
                             )
                         }
+                    }
+                }
+            }
+            
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isProcessing,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = 0.4f))
+                        .pointerInput(Unit) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            color = Color(0xFFC7E054),
+                            strokeWidth = 6.dp
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "Analizando prendas...",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Extrayendo silueta y colores",
+                            fontSize = 14.sp,
+                            color = Color.DarkGray
+                        )
                     }
                 }
             }
@@ -832,6 +887,7 @@ fun CameraPreviewView(
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
                     this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                    this.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                 }
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
@@ -866,7 +922,19 @@ fun CameraPreviewView(
 
                 previewView
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { view ->
+                val ctx = view.context
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                cameraProviderFuture.addListener({
+                    try {
+                        val cameraProvider = cameraProviderFuture.get()
+                        cameraProvider.unbindAll()
+                    } catch (exc: Exception) {
+                        Log.e("CameraPreview", "Error unbinding camera", exc)
+                    }
+                }, ContextCompat.getMainExecutor(ctx))
+            }
         )
     }
 }
@@ -1012,26 +1080,64 @@ fun processCapturedImageData(
     
     labeler.process(image)
         .addOnSuccessListener { labels ->
-            var category = "Desconocido"
+            var category = "Otro"
             val foundLabels = labels.map { it.text.lowercase() }
             
-            if (foundLabels.any { it in listOf("hat", "cap", "beanie", "fedora", "sombrero") }) {
-                category = "Cabeza"
-            } else if (foundLabels.any { it in listOf("shoe", "footwear", "sneaker", "boot") }) {
-                category = "Calzado"
-            } else if (foundLabels.any { it in listOf("shirt", "t-shirt", "top", "blouse", "sweater", "jacket") }) {
+            if (foundLabels.any { it in listOf("glasses", "sunglasses") }) {
+                category = "Gafas"
+            } else if (foundLabels.any { it in listOf("watch", "wristwatch") }) {
+                category = "Reloj"
+            } else if (foundLabels.any { it in listOf("belt") }) {
+                category = "Cinturón"
+            } else if (foundLabels.any { it in listOf("tie") }) {
+                category = "Corbata"
+            } else if (foundLabels.any { it in listOf("scarf") }) {
+                category = "Bufanda"
+            } else if (foundLabels.any { it in listOf("necklace", "ring", "earring", "jewelry") }) {
+                category = "Joyería"
+            } else if (foundLabels.any { it in listOf("backpack") }) {
+                category = "Mochila"
+            } else if (foundLabels.any { it in listOf("bag", "handbag") }) {
+                category = "Bolso"
+            } else if (foundLabels.any { it in listOf("cap") }) {
+                category = "Gorra"
+            } else if (foundLabels.any { it in listOf("hat", "fedora", "sombrero") }) {
+                category = "Sombrero"
+            } else if (foundLabels.any { it in listOf("beanie") }) {
+                category = "Gorro"
+            } else if (foundLabels.any { it in listOf("sneaker") }) {
+                category = "Zapatillas"
+            } else if (foundLabels.any { it in listOf("boot") }) {
+                category = "Botas"
+            } else if (foundLabels.any { it in listOf("shoe", "footwear") }) {
+                category = "Zapatos"
+            } else if (foundLabels.any { it in listOf("sweater") }) {
+                category = "Suéter"
+            } else if (foundLabels.any { it in listOf("jacket") }) {
+                category = "Chaqueta"
+            } else if (foundLabels.any { it in listOf("coat") }) {
+                category = "Abrigo"
+            } else if (foundLabels.any { it in listOf("blouse") }) {
+                category = "Blusa"
+            } else if (foundLabels.any { it in listOf("t-shirt") }) {
+                category = "Camiseta"
+            } else if (foundLabels.any { it in listOf("shirt", "top") }) {
                 category = "Camisa"
-            } else if (foundLabels.any { it in listOf("pants", "trousers", "jeans", "shorts", "skirt") }) {
+            } else if (foundLabels.any { it in listOf("jeans") }) {
+                category = "Jeans"
+            } else if (foundLabels.any { it in listOf("shorts") }) {
+                category = "Short"
+            } else if (foundLabels.any { it in listOf("skirt") }) {
+                category = "Falda"
+            } else if (foundLabels.any { it in listOf("pants", "trousers") }) {
                 category = "Pantalón"
             } else if (foundLabels.any { it in listOf("dress") }) {
                 category = "Vestido"
-            } else if (foundLabels.any { it in listOf("bag", "handbag", "backpack") }) {
-                category = "Bolso"
             }
             
             onComplete(filePath, category, extractedColors)
         }
         .addOnFailureListener {
-            onComplete(filePath, "Desconocido", extractedColors)
+            onComplete(filePath, "Otro", extractedColors)
         }
 }

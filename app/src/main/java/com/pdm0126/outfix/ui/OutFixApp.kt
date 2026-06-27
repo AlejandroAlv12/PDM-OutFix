@@ -1,9 +1,8 @@
 package com.pdm0126.outfix.ui
 
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
@@ -18,6 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -28,14 +33,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.togetherWith
 import androidx.navigation3.runtime.NavKey
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
 import android.os.Build
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import com.pdm0126.outfix.screens.home.HomeScreen
-import com.pdm0126.outfix.screens.editor.OutfitEditorScreen
+import com.pdm0126.outfix.screens.laundry.LaundryScreen
 import com.pdm0126.outfix.screens.planner.WeeklyPlannerScreen
 import com.pdm0126.outfix.screens.closet.ClosetScreen
 import com.pdm0126.outfix.screens.profile.ProfileScreen
@@ -43,32 +48,29 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.foundation.gestures.scrollBy
 import kotlin.math.roundToInt
 
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
     Home("Home", Icons.Outlined.Home),
-    OutfitEditor("Editor", Icons.Outlined.Checkroom),
+    Closet("Closet", Icons.Outlined.Checkroom),
     WeeklyPlanner("Planner", Icons.Outlined.CalendarToday),
-    Closet("Closet", Icons.Outlined.DeleteOutline),
+    Laundry("Cesto", Icons.Outlined.LocalLaundryService),
     Profile("Profile", Icons.Outlined.Person)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(onLogout: () -> Unit = {}) {
     val screens = OutFixScreen.entries
     val navigationState = rememberNavigationState(
         startRoute = OutFixScreen.Home,
@@ -101,10 +103,91 @@ fun MainScreen() {
     val backgroundLayer = rememberGraphicsLayer()
     var pagerCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFEDDDCC)
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(pagerState.currentPage) {
+        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    }
+
+    val bottomPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    var showAuthModal by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    val authTransition = androidx.compose.animation.core.updateTransition(
+        targetState = showAuthModal, 
+        label = "AuthTransition"
+    )
+    val targetBlur = when {
+        showAuthModal -> 30f
+        showLogoutDialog -> 2f
+        else -> 0f
+    }
+    val blurDuration = when {
+        showAuthModal -> 800
+        showLogoutDialog -> 300
+        else -> 300
+    }
+    val bgBlur by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = targetBlur,
+        animationSpec = androidx.compose.animation.core.tween(blurDuration, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "BgBlur"
+    )
+
+    val authAlpha by authTransition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(800) },
+        label = "AuthAlpha"
+    ) { if (it) 1f else 0f }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (bgBlur > 0f && Build.VERSION.SDK_INT >= 31) Modifier.blur(bgBlur.dp) else Modifier)
+        ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFFFFFFF),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "OutFix",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                            color = Color.Black,
+                            modifier = Modifier.padding(end = 48.dp)
+                        )
+                    }
+                },
+                navigationIcon = {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.Gray.copy(alpha = 0.5f))
+                            .clickable {  },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = "Menu",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    scrolledContainerColor = Color.White
+                )
+            )
+        }
     ) { innerPadding ->
+
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
                 modifier = Modifier
@@ -124,10 +207,10 @@ fun MainScreen() {
             ) { page ->
                 when (screens[page]) {
                     OutFixScreen.Home -> HomeScreen()
-                    OutFixScreen.OutfitEditor -> OutfitEditorScreen()
-                    OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
                     OutFixScreen.Closet -> ClosetScreen()
-                    OutFixScreen.Profile -> ProfileScreen()
+                    OutFixScreen.WeeklyPlanner -> WeeklyPlannerScreen()
+                    OutFixScreen.Laundry -> LaundryScreen()
+                    OutFixScreen.Profile -> ProfileScreen(onLogoutClick = { showLogoutDialog = true }, onShowAuth = { showAuthModal = true })
                 }
             }
 
@@ -147,85 +230,277 @@ fun MainScreen() {
                     }
                 )
             }
+        }
+    }
 
-            var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
+    var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
             var showScanner by remember { mutableStateOf(false) }
             var capturedImagePath by remember { mutableStateOf<String?>(null) }
             var capturedCategory by remember { mutableStateOf("") }
             var capturedColors by remember { mutableStateOf<List<androidx.compose.ui.graphics.Color>>(emptyList()) }
 
-            Box(
+            val configuration = LocalConfiguration.current
+            val screenWidth = configuration.screenWidthDp.dp
+            val screenHeight = configuration.screenHeightDp.dp + 100.dp
+
+            val isFabExpanded = showScanner || capturedImagePath != null
+            val isHome = pagerState.currentPage == screens.indexOf(OutFixScreen.Home)
+
+            androidx.activity.compose.BackHandler(enabled = isFabExpanded) {
+                if (capturedImagePath != null) {
+                    capturedImagePath = null
+                    showScanner = true
+                } else if (showScanner) {
+                    showScanner = false
+                }
+            }
+
+            val fabWidth by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) screenWidth else 72.dp,
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabWidth"
+            )
+            val fabHeight by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) screenHeight else 72.dp,
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabHeight"
+            )
+            val fabPaddingEnd by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else 28.dp,
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabPaddingEnd"
+            )
+            val fabPaddingBottom by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else (bottomPadding + 110.dp),
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabPaddingBottom"
+            )
+            val fabCornerRadius by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isFabExpanded) 0.dp else 36.dp,
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabCornerRadius"
+            )
+            val fabNormalizedRadius by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isFabExpanded) 0f else 0.5f,
+                animationSpec = androidx.compose.animation.core.tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                label = "fabNormalizedRadius"
+            )
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isHome || isFabExpanded,
+                enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                exit = androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutLinearInEasing)) + 
+                       androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(350)),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 28.dp, bottom = innerPadding.calculateBottomPadding() + 110.dp)
-                    .size(72.dp)
-                    .onGloballyPositioned { coords ->
-                        if (pagerCoords != null) {
-                            fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
-                        }
-                    }
-                    .clip(CircleShape)
-                    .clickable { showScanner = true },
-                contentAlignment = Alignment.Center
+                    .padding(end = fabPaddingEnd, bottom = fabPaddingBottom)
             ) {
-                if (Build.VERSION.SDK_INT >= 31) {
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier.fillMaxSize().liquidGlass(
-                            blur = 12f,
-                            saturation = 1.2f,
-                            refraction = 0.5f,
-                            curve = 0.5f,
-                            dispersion = 0.15f,
-                            normalizedRadius = 0.5f
-                        )
-                    ) {
-                        translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
-                            drawLayer(backgroundLayer)
+                var isFabPressedInstant by remember { mutableStateOf(false) }
+                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+                val fabScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isFabPressedInstant && !isFabExpanded) 1.08f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = 400f
+                    ),
+                    label = "fabGlassScale"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(width = fabWidth, height = fabHeight)
+                        .onGloballyPositioned { coords ->
+                            if (pagerCoords != null) {
+                                fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
+                            }
                         }
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        }
+                        .pointerInput(!isFabExpanded) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                if (!isFabExpanded) {
+                                    isFabPressedInstant = true
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    waitForUpOrCancellation()
+                                    isFabPressedInstant = false
+                                }
+                            }
+                        }
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            enabled = !isFabExpanded
+                        ) {
+                            if (!isFabExpanded) {
+                                showScanner = true 
+                            }
+                        }
+                        .clip(RoundedCornerShape(fabCornerRadius)),
+                    contentAlignment = Alignment.Center
+                ) {
+                val bgOverlayAlpha by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isFabExpanded) 1f else 0f,
+                    animationSpec = if (isFabExpanded) {
+                        androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearEasing)
+                    } else {
+                        androidx.compose.animation.core.tween(150, delayMillis = 350, easing = androidx.compose.animation.core.LinearEasing)
+                    },
+                    label = "bgOverlayAlpha"
+                )
+
+                if (bgOverlayAlpha < 0.99f) {
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        androidx.compose.foundation.Canvas(
+                            modifier = Modifier.fillMaxSize().liquidGlass(
+                                blur = 12f,
+                                saturation = 1.2f,
+                                refraction = 0.5f,
+                                curve = 0.5f,
+                                dispersion = 0.15f,
+                                normalizedRadius = fabNormalizedRadius
+                            )
+                        ) {
+                            scale(
+                                scaleX = 1f / fabScale,
+                                scaleY = 1f / fabScale,
+                                pivot = center
+                            ) {
+                                translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
+                                    drawLayer(backgroundLayer)
+                                }
+                            }
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
                     }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
+
+                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
+                }
+                
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5).copy(alpha = bgOverlayAlpha)))
+                
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !isFabExpanded,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Scan Garment",
+                        tint = Color.White,
+                        modifier = Modifier.size(50.dp)
+                    )
                 }
 
-                Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
-                
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = "Scan Garment",
-                    tint = Color.White,
-                    modifier = Modifier.size(50.dp)
-                )
-            }
-
-            if (showScanner) {
-                com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
-                    onClose = { showScanner = false },
-                    onImageCaptured = { imagePath, category, colors ->
-                        showScanner = false
-                        capturedImagePath = imagePath
-                        capturedCategory = category
-                        capturedColors = colors
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isFabExpanded,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, delayMillis = 100)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                ) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = capturedImagePath != null,
+                        transitionSpec = {
+                            if (targetState && !initialState) {
+                                (androidx.compose.animation.slideInHorizontally(
+                                    initialOffsetX = { it },
+                                    animationSpec = androidx.compose.animation.core.tween(400)
+                                ) + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally(
+                                        targetOffsetX = { -it },
+                                        animationSpec = androidx.compose.animation.core.tween(400)
+                                    ) + androidx.compose.animation.fadeOut()
+                                )
+                            } else if (!targetState && initialState) {
+                                (androidx.compose.animation.slideInHorizontally(
+                                    initialOffsetX = { -it },
+                                    animationSpec = androidx.compose.animation.core.tween(400)
+                                ) + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally(
+                                        targetOffsetX = { it },
+                                        animationSpec = androidx.compose.animation.core.tween(400)
+                                    ) + androidx.compose.animation.fadeOut()
+                                )
+                            } else {
+                                androidx.compose.animation.fadeIn().togetherWith(androidx.compose.animation.fadeOut())
+                            }
+                        },
+                        label = "ScanToNewTransition"
+                    ) { isNewGarment ->
+                        if (!isNewGarment) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                com.pdm0126.outfix.screens.scan.ScanGarmentScreen(
+                                    onClose = { showScanner = false },
+                                    onImageCaptured = { imagePath, category, colors ->
+                                        capturedImagePath = imagePath
+                                        capturedCategory = category
+                                        capturedColors = colors
+                                    }
+                                )
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                capturedImagePath?.let { imagePath ->
+                                    com.pdm0126.outfix.screens.scan.NewGarmentScreen(
+                                        imagePath = imagePath,
+                                        detectedCategory = capturedCategory,
+                                        detectedColors = capturedColors,
+                                        onBack = { 
+                                            capturedImagePath = null
+                                        },
+                                        onSave = {
+                                            capturedImagePath = null
+                                            showScanner = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
-                )
-            }
-
-            capturedImagePath?.let { imagePath ->
-                com.pdm0126.outfix.screens.scan.NewGarmentScreen(
-                    imagePath = imagePath,
-                    detectedCategory = capturedCategory,
-                    detectedColors = capturedColors,
-                    onBack = { 
-                        capturedImagePath = null
-                        showScanner = true
-                    },
-                    onSave = {
-                        capturedImagePath = null
                     }
+                }
+            }
+    }
+        }
+
+        if (authAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f * authAlpha))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showAuthModal = false }
+                    )
+            )
+            
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                AuthModal(
+                    isVisible = showAuthModal,
+                    onDismiss = { showAuthModal = false },
+                    onSuccess = { showAuthModal = false }
                 )
             }
         }
-    }
-}
+        
+        com.pdm0126.outfix.screens.profile.LogoutDialogOverlay(
+            showLogoutDialog = showLogoutDialog,
+            onDismiss = { showLogoutDialog = false },
+            onConfirm = { 
+                showLogoutDialog = false
+                onLogout()
+            },
+            appBackgroundLayer = backgroundLayer,
+            pagerCoords = pagerCoords
+        )
+    } // End of outer Box
+
 
 @Composable
 fun FloatingBottomNavBar(

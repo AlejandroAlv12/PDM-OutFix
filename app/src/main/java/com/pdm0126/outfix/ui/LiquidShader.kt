@@ -16,7 +16,8 @@ fun Modifier.liquidGlass(
     curve: Float = 0.08f,
     dispersion: Float = 0.05f,
     edge: Float = 2f,
-    normalizedRadius: Float = 0.5f
+    normalizedRadius: Float = 0.5f,
+    cornerRadius: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp.Unspecified
 ) = this.graphicsLayer {
     if (Build.VERSION.SDK_INT >= 31 && size.width > 0f) {
         val blurEffect = android.graphics.RenderEffect.createBlurEffect(
@@ -35,7 +36,14 @@ fun Modifier.liquidGlass(
         if (Build.VERSION.SDK_INT >= 33) {
             val shader = android.graphics.RuntimeShader(LiquidShader)
             shader.setFloatUniform("size", size.width, size.height)
-            shader.setFloatUniform("cornerRadii", normalizedRadius, normalizedRadius, normalizedRadius, normalizedRadius)
+            
+            val actualNormalizedRadius = if (cornerRadius != androidx.compose.ui.unit.Dp.Unspecified) {
+                val minDim = minOf(size.width, size.height)
+                if (minDim > 0) cornerRadius.toPx() / minDim else 0f
+            } else {
+                normalizedRadius
+            }
+            shader.setFloatUniform("cornerRadii", actualNormalizedRadius, actualNormalizedRadius, actualNormalizedRadius, actualNormalizedRadius)
             shader.setFloatUniform("refraction", refraction)
             shader.setFloatUniform("curve", curve)
             val minDimension = minOf(size.width, size.height)
