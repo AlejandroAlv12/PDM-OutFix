@@ -507,7 +507,7 @@ fun NewGarmentScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                if (selectedCategory !in listOf("Zapatillas", "Botas", "Zapatos", "Bolso", "Mochila", "Gorra", "Sombrero", "Gorro", "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio")) {
+                if (selectedCategory !in listOf("Zapatillas", "Botas", "Zapatos", "Bolso", "Mochila", "Gorra", "Sombrero", "Gorro", "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Otro")) {
                     CustomSizeSlider(
                         selectedIndex = selectedSizeIndex,
                         onIndexChanged = { selectedSizeIndex = it }

@@ -92,11 +92,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
             ) {
                 Spacer(modifier = Modifier.height(402.dp))
 
-                val tops = garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") }
-                val bottoms = garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") }
-                val shoes = garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") }
-                val headwear = garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") }
-                val accessories = garments.filter { it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") }
+                val tops = remember(garments) { garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
+                val bottoms = remember(garments) { garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
+                val shoes = remember(garments) { garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
+                val headwear = remember(garments) { garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") } }
+                val accessories = remember(garments) { garments.filter { it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
 
                 val isDressSelected = selectedTop?.category?.equals("Vestido", ignoreCase = true) == true
                 
@@ -153,7 +153,14 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                             if (isAlreadySelected) {
                                 selectedAccessories = selectedAccessories.filter { it.id != clickedItem.id }
                             } else {
-                                val filtered = selectedAccessories.filter { !it.category.equals(currentCategory, ignoreCase = true) }
+                                val exclusiveBags = listOf("bolso", "mochila")
+                                val isBag = currentCategory?.lowercase() in exclusiveBags
+                                
+                                val filtered = selectedAccessories.filter { existing ->
+                                    val sameCategory = existing.category.equals(currentCategory, ignoreCase = true)
+                                    val bothAreBags = isBag && existing.category?.lowercase() in exclusiveBags
+                                    !(sameCategory || bothAreBags)
+                                }
                                 selectedAccessories = filtered + clickedItem
                             }
                         }
@@ -284,15 +291,16 @@ fun OutfitPreview(
     head: GarmentResponse?,
     accessories: List<GarmentResponse> = emptyList()
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
             .height(290.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFFF6EEE6))
-            .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
-        contentAlignment = Alignment.Center
+            .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         val defaultSkin = Color(0xFFEAC3AB)
         
@@ -302,10 +310,67 @@ fun OutfitPreview(
         val shoesColor = remember(shoes?.colorHex) { shoes?.colorHex?.let { parseColorHex(it) } }
         val hatColor = remember(head?.colorHex) { head?.colorHex?.let { parseColorHex(it) } ?: defaultSkin }
 
-        Canvas(modifier = Modifier.fillMaxSize().padding(vertical = 16.dp)) {
-            val cx = size.width / 2
+        val headCategories = remember { listOf("Gafas", "Joyería") }
+        val topCategories = remember { listOf("Bufanda", "Corbata") }
+        val bottomCategories = remember { listOf("Reloj", "Cinturón") }
+        val shoesCategories = remember { listOf("Bolso", "Mochila", "Otro") }
+        
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val isDress = top?.category?.equals("Vestido", ignoreCase = true) == true
+            
+            Column(
+                modifier = Modifier
+                    .width(76.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            ) {
+                UnifiedMainSlot("Cabeza", head, Modifier.weight(1f))
+                
+                if (isDress) {
+                    UnifiedMainSlot("Vestido", top, Modifier.weight(2f))
+                } else {
+                    UnifiedMainSlot("Superior", top, Modifier.weight(1f))
+                    UnifiedMainSlot("Inferior", bottom, Modifier.weight(1f))
+                }
+                
+                UnifiedMainSlot("Calzado", shoes, Modifier.weight(1f))
+            }
+            
+            Column(modifier = Modifier.fillMaxHeight()) {
+                val headAccs = remember(accessories) { accessories.filter { it.category in headCategories } }
+                val topAccs = remember(accessories) { accessories.filter { it.category in topCategories } }
+                val bottomAccs = remember(accessories) { accessories.filter { it.category in bottomCategories } }
+                val shoesAccs = remember(accessories) { accessories.filter { it.category in shoesCategories } }
+
+                UnifiedAccessoryRow(headAccs, Modifier.weight(1f))
+                
+                if (isDress) {
+                    Column(modifier = Modifier.weight(2f)) {
+                        UnifiedAccessoryRow(topAccs, Modifier.weight(1f))
+                        UnifiedAccessoryRow(bottomAccs, Modifier.weight(1f))
+                    }
+                } else {
+                    UnifiedAccessoryRow(topAccs, Modifier.weight(1f))
+                    UnifiedAccessoryRow(bottomAccs, Modifier.weight(1f))
+                }
+                
+                UnifiedAccessoryRow(shoesAccs, Modifier.weight(1f))
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxHeight().aspectRatio(0.5f)) {
+            Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
+            val u = size.height / 340f
+            val cx = size.width - 73f * u
             val cy = size.height / 2
-            val u = size.height / 320f
             
             val headRadius = 26f * u
             val headCenter = Offset(cx, cy - 90f * u)
@@ -654,7 +719,14 @@ fun OutfitPreview(
                 drawPath(path = rightShoePath, color = shoesColor)
             }
             
-            accessories.forEach { accessory ->
+            val zOrder = mapOf(
+                "joyería" to 1,
+                "corbata" to 2,
+                "bufanda" to 3
+            )
+            val sortedAccessories = accessories.sortedBy { zOrder[it.category?.lowercase()] ?: 10 }
+            
+            sortedAccessories.forEach { accessory ->
                 val accCategory = accessory.category
                 val accColor = accessory.colorHex?.let { parseColorHex(it) } ?: Color.Black
                 
@@ -728,6 +800,51 @@ fun OutfitPreview(
                     )
                 }
             }
+            }
+        }
+    }
+}
+
+@Composable
+fun UnifiedMainSlot(title: String, mainItem: GarmentResponse?, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        if (mainItem != null) {
+            AsyncImage(
+                model = mainItem.imageUrl,
+                contentDescription = mainItem.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun UnifiedAccessoryRow(accessories: List<GarmentResponse>, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        accessories.take(2).forEach { acc ->
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = acc.imageUrl,
+                    contentDescription = acc.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(2.dp)
+                )
+            }
         }
     }
 }
@@ -752,7 +869,6 @@ fun CategorySlider(
                     .clip(RoundedCornerShape(50))
                     .background(Color.Black)
                     .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .clickable {  }
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -843,7 +959,7 @@ fun GarmentCard(
         AsyncImage(
             model = garment.imageUrl,
             contentDescription = garment.name,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(16.dp))
