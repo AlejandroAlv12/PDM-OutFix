@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +19,6 @@ import com.pdm0126.outfix.ui.liquidGlass
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -48,21 +45,30 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(48.dp))
+            
             Box(
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape)
-                    .background(if (hasSession) Color(0xFFDCB888) else Color.LightGray),
-                contentAlignment = Alignment.Center
+                    .background(Color.White),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Person,
-                    contentDescription = "Avatar",
-                    tint = Color.White,
-                    modifier = Modifier.size(72.dp)
+                Box(
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFD1D1D1))
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(top = 125.dp)
+                        .requiredSize(100.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFD1D1D1))
                 )
             }
 
@@ -85,11 +91,11 @@ fun ProfileScreen(
                 modifier = if (hasSession) Modifier else Modifier.padding(horizontal = 16.dp)
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(if (hasSession) 0.5f else 1f)
                     .height(56.dp)
                     .bouncyClickable { if (hasSession) onLogoutClick() else onShowAuth() }
                     .clip(RoundedCornerShape(12.dp))
@@ -103,6 +109,8 @@ fun ProfileScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+            
+            Spacer(modifier = Modifier.height(96.dp))
         }
     }
 }
@@ -115,48 +123,52 @@ fun LogoutDialogOverlay(
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
     pagerCoords: LayoutCoordinates?
 ) {
-    val transition = androidx.compose.animation.core.updateTransition(
-        targetState = showLogoutDialog,
-        label = "LogoutDialogTransition"
-    )
-    val alpha by transition.animateFloat(
-        transitionSpec = { androidx.compose.animation.core.tween(300) },
-        label = "Alpha"
-    ) { if (it) 1f else 0f }
-    val scale by transition.animateFloat(
-        transitionSpec = {
-            if (targetState) {
-                androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 400f)
-            } else {
-                androidx.compose.animation.core.tween(200)
-            }
-        },
-        label = "Scale"
-    ) { if (it) 1f else 0.85f }
+    var exitDirection by remember { mutableStateOf(1f) }
 
-    if (alpha > 0f) {
+    LaunchedEffect(showLogoutDialog) {
+        if (showLogoutDialog) {
+            exitDirection = 1f
+        }
+    }
+
+    val transitionState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    transitionState.targetState = showLogoutDialog
+    val transition = androidx.compose.animation.core.updateTransition(transitionState, label = "LogoutDialogTransition")
+
+    val bgAlpha by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(300) },
+        label = "BgAlpha"
+    ) { if (it) 1f else 0f }
+
+    val containerOffsetY by transition.animateFloat(
+        transitionSpec = { androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+        label = "containerOffset"
+    ) { if (it) 0f else 1500f * exitDirection }
+
+    if (transition.currentState || transition.targetState) {
         var dialogCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f * alpha))
+                .background(Color.Black.copy(alpha = 0.4f * bgAlpha))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onDismiss
+                    onClick = {
+                        exitDirection = 1f
+                        onDismiss()
+                    }
                 ),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        this.alpha = alpha
-                    }
                     .onGloballyPositioned { dialogCoords = it }
+                    .graphicsLayer {
+                        translationY = containerOffsetY
+                    }
                     .clip(RoundedCornerShape(28.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -170,18 +182,16 @@ fun LogoutDialogOverlay(
                             .matchParentSize()
                             .liquidGlass(
                                 blur = 30f,
-                                refraction = 0.5f,
+                                refraction = 0.9f,
                                 edge = 1.5f,
                                 normalizedRadius = 0.15f
                             )
                     ) {
                         if (appBackgroundLayer != null && pagerCoords?.isAttached == true && dialogCoords?.isAttached == true) {
-                            scale(scaleX = 1f / scale, scaleY = 1f / scale, pivot = androidx.compose.ui.geometry.Offset.Zero) {
-                                val sPos = pagerCoords.positionInRoot()
-                                val dPos = dialogCoords!!.positionInRoot()
-                                translate(left = -(dPos.x - sPos.x), top = -(dPos.y - sPos.y)) {
-                                    drawLayer(appBackgroundLayer)
-                                }
+                            val sPos = pagerCoords.positionInRoot()
+                            val dPos = dialogCoords!!.positionInRoot()
+                            translate(left = -(dPos.x - sPos.x), top = -(dPos.y - sPos.y + containerOffsetY)) {
+                                drawLayer(appBackgroundLayer)
                             }
                         }
                     }
@@ -225,24 +235,34 @@ fun LogoutDialogOverlay(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.bouncyClickable { onDismiss() }
+                        Box(
+                            modifier = Modifier
+                                .bouncyClickable { 
+                                    exitDirection = 1f
+                                    onDismiss() 
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 "Cancelar",
-                                color = Color.Gray,
+                                color = Color(0xFFFF0000),
                                 fontWeight = FontWeight.Bold
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(
-                            onClick = onConfirm,
-                            modifier = Modifier.bouncyClickable { onConfirm() }
+                        Box(
+                            modifier = Modifier
+                                .bouncyClickable { 
+                                    exitDirection = -1f
+                                    onConfirm() 
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "Sí, salir",
-                                color = Color(0xFFFF0000),
+                                "Salir",
+                                color = Color.Black,
                                 fontWeight = FontWeight.Bold
                             )
                         }

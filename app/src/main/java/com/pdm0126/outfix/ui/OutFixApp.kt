@@ -117,31 +117,33 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         targetState = showAuthModal, 
         label = "AuthTransition"
     )
-    val authBlur by authTransition.animateFloat(
-        transitionSpec = { androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
-        label = "AuthBlur"
-    ) { if (it) 30f else 0f }
+    val targetBlur = when {
+        showAuthModal -> 30f
+        showLogoutDialog -> 2f
+        else -> 0f
+    }
+    val blurDuration = when {
+        showAuthModal -> 800
+        showLogoutDialog -> 300
+        else -> 300
+    }
+    val bgBlur by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = targetBlur,
+        animationSpec = androidx.compose.animation.core.tween(blurDuration, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "BgBlur"
+    )
+
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
         label = "AuthAlpha"
     ) { if (it) 1f else 0f }
-    val authScale by authTransition.animateFloat(
-        transitionSpec = { 
-            if (targetState) {
-                androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 400f)
-            } else {
-                androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutLinearInEasing)
-            }
-        },
-        label = "AuthScale"
-    ) { if (it) 1f else 0.85f }
 
     Box(modifier = Modifier.fillMaxSize()) {
         
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (authBlur > 0f && Build.VERSION.SDK_INT >= 31) Modifier.blur(authBlur.dp) else Modifier)
+                .then(if (bgBlur > 0f && Build.VERSION.SDK_INT >= 31) Modifier.blur(bgBlur.dp) else Modifier)
         ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -228,17 +230,6 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                     }
                 )
             }
-            
-            com.pdm0126.outfix.screens.profile.LogoutDialogOverlay(
-                showLogoutDialog = showLogoutDialog,
-                onDismiss = { showLogoutDialog = false },
-                onConfirm = { 
-                    showLogoutDialog = false
-                    onLogout()
-                },
-                appBackgroundLayer = backgroundLayer,
-                pagerCoords = pagerCoords
-            )
         }
     }
 
@@ -497,6 +488,17 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 )
             }
         }
+        
+        com.pdm0126.outfix.screens.profile.LogoutDialogOverlay(
+            showLogoutDialog = showLogoutDialog,
+            onDismiss = { showLogoutDialog = false },
+            onConfirm = { 
+                showLogoutDialog = false
+                onLogout()
+            },
+            appBackgroundLayer = backgroundLayer,
+            pagerCoords = pagerCoords
+        )
     } // End of outer Box
 
 
