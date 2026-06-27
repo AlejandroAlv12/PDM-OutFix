@@ -151,7 +151,7 @@ fun NewGarmentScreen(
             val targetWidth = 200.dp
             val menuProgress by animateFloatAsState(
                 targetValue = if (showCategoryMenu) 1f else 0f,
-                animationSpec = tween(400),
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
                 label = "menuProgress"
             )
             
@@ -294,7 +294,7 @@ fun NewGarmentScreen(
                     modifier = Modifier
                         .wrapContentSize(Alignment.TopStart)
                         .zIndex(10f)
-                        .alpha(if (menuProgress > 0f) 0f else 1f)
+                        .alpha(if (showCategoryMenu || menuProgress > 0f) 0f else 1f)
                 ) {
                     com.pdm0126.outfix.ui.LiquidDropdownButton(
                         selectedItem = selectedCategory,
@@ -304,7 +304,7 @@ fun NewGarmentScreen(
                         },
                         onGloballyPositioned = { buttonCoords = it },
                         modifier = Modifier.zIndex(10f),
-                        alpha = if (menuProgress > 0f) 0f else 1f
+                        alpha = if (showCategoryMenu || menuProgress > 0f) 0f else 1f
                     )
                 }
                 

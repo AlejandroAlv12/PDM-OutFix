@@ -173,7 +173,8 @@ fun LiquidDropdownOverlay(
                         refraction = 0.5f,
                         curve = 0.05f,
                         dispersion = 0.25f,
-                        normalizedRadius = 0.15f
+                        normalizedRadius = 0.15f,
+                        cornerRadius = cornerRadius
                     )
             ) {
                 scale(scaleX = 1f / menuScale, scaleY = 1f / menuScale, pivot = Offset(size.width / 2f, 0f)) {
