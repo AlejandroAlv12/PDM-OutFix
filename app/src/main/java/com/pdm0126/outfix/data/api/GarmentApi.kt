@@ -11,4 +11,6 @@ interface GarmentApi {
     @POST("garments")
     suspend fun createGarment(@Body request: CreateGarmentRequest): ApiResponse<GarmentResponse>
 
+    @retrofit2.http.GET("garments")
+    suspend fun getGarments(): ApiResponse<List<GarmentResponse>>
 }

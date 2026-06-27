@@ -215,34 +215,16 @@ fun NewGarmentScreen(
                                     imageUrl = imagePath
                                 )
                                 try {
-                                    val response = com.pdm0126.outfix.data.api.RetrofitClient.garmentApi.createGarment(request)
-                                    if (response.success) {
-                                        response.data?.let { com.pdm0126.outfix.data.mock.MockDatabase.addGarment(it) }
+                                    val result = com.pdm0126.outfix.OutfixApplication.instance.garmentRepository.createGarment(request)
+                                    if (result.isSuccess) {
                                         android.widget.Toast.makeText(context, "Prenda guardada con éxito", android.widget.Toast.LENGTH_SHORT).show()
                                         onSave()
                                     } else {
-                                        android.widget.Toast.makeText(context, "Error: ${response.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, "Error guardando prenda", android.widget.Toast.LENGTH_SHORT).show()
+                                        onSave()
                                     }
                                 } catch (e: Exception) {
-                                    android.util.Log.e("NewGarmentScreen", "Error saving garment", e)
-                                    val mockGarment = com.pdm0126.outfix.data.api.dto.GarmentResponse(
-                                        id = java.util.UUID.randomUUID().toString(),
-                                        userId = "dummy",
-                                        name = request.name,
-                                        category = request.category,
-                                        colorHex = request.colorHex,
-                                        colorName = "Detectado",
-                                        style = request.style,
-                                        brand = request.brand ?: "Genérica",
-                                        size = request.size ?: "M",
-                                        status = "AVAILABLE",
-                                        imageUrl = request.imageUrl ?: "",
-                                        notes = "Guardado sin conexión",
-                                        createdAt = "Recién",
-                                        updatedAt = "Recién"
-                                    )
-                                    com.pdm0126.outfix.data.mock.MockDatabase.addGarment(mockGarment)
-                                    android.widget.Toast.makeText(context, "Guardado localmente (Sin red)", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.util.Log.e("NewGarmentScreen", "Error", e)
                                     onSave()
                                 } finally {
                                     isSaving = false
