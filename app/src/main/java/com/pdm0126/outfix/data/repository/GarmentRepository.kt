@@ -114,4 +114,70 @@ class GarmentRepository(
             }
         }
     }
+
+    /**
+     * Updates a garment locally first (optimistic), then syncs to server.
+     * Also updates any planner day references that hold this garment.
+     */
+    suspend fun updateGarment(garment: GarmentResponse) {
+        // 1. Optimistic local update
+        withContext(Dispatchers.IO) {
+            garmentDao.insertGarment(garment.toEntity(isPendingSync = false))
+        }
+
+        // 2. Update planner day references in MockDatabase (keeps planner consistent)
+        com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
+            if (day.topGarment?.id == garment.id) day.topGarment = garment
+            if (day.bottomGarment?.id == garment.id) day.bottomGarment = garment
+            if (day.shoesGarment?.id == garment.id) day.shoesGarment = garment
+            if (day.hatGarment?.id == garment.id) day.hatGarment = garment
+            day.accessories = day.accessories.map { if (it.id == garment.id) garment else it }
+        }
+
+        // 3. Try to push to server
+        try {
+            val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
+                name = garment.name,
+                category = garment.category,
+                colorHex = garment.colorHex,
+                colorName = garment.colorName,
+                style = garment.style,
+                brand = garment.brand,
+                size = garment.size,
+                status = garment.status,
+                imageUrl = garment.imageUrl,
+                notes = garment.notes
+            )
+            RetrofitClient.garmentApi.updateGarment(garment.id, request)
+        } catch (e: Exception) {
+            // Server unreachable — local DB already has the updated data
+        }
+    }
+
+    /**
+     * Deletes a garment locally first (optimistic), then syncs to server.
+     * Also removes the garment from any planner day that references it.
+     */
+    suspend fun deleteGarment(id: String) {
+        // 1. Optimistic local delete
+        withContext(Dispatchers.IO) {
+            garmentDao.deleteGarmentById(id)
+        }
+
+        // 2. Remove from planner day references
+        com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
+            if (day.topGarment?.id == id) day.topGarment = null
+            if (day.bottomGarment?.id == id) day.bottomGarment = null
+            if (day.shoesGarment?.id == id) day.shoesGarment = null
+            if (day.hatGarment?.id == id) day.hatGarment = null
+            day.accessories = day.accessories.filter { it.id != id }
+        }
+
+        // 3. Try to push to server
+        try {
+            RetrofitClient.garmentApi.deleteGarment(id)
+        } catch (e: Exception) {
+            // Server unreachable — local DB already deleted it
+        }
+    }
 }

@@ -498,18 +498,25 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     }
         }
 
+        val overlayScope = androidx.compose.runtime.rememberCoroutineScope()
+        val garmentRepository = com.pdm0126.outfix.OutfixApplication.instance.garmentRepository
+
         com.pdm0126.outfix.screens.closet.GarmentDetailOverlay(
             garment = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarment,
             sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarmentBounds,
             appBackgroundLayer = globalAppLayer,
             onDismiss = { com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false },
             onUpdate = { updatedGarment ->
-                com.pdm0126.outfix.data.mock.MockDatabase.updateGarment(updatedGarment)
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false
+                overlayScope.launch {
+                    garmentRepository.updateGarment(updatedGarment)
+                }
             },
             onDelete = { garmentId ->
-                com.pdm0126.outfix.data.mock.MockDatabase.deleteGarment(garmentId)
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false
+                overlayScope.launch {
+                    garmentRepository.deleteGarment(garmentId)
+                }
             }
         )
 

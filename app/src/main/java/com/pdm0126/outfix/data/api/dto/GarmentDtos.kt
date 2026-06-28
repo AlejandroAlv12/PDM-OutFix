@@ -17,6 +17,20 @@ data class CreateGarmentRequest(
 )
 
 @Serializable
+data class UpdateGarmentRequest(
+    val name: String,
+    val category: String,
+    val colorHex: String? = null,
+    val colorName: String? = null,
+    val style: String? = null,
+    val brand: String? = null,
+    val size: String? = null,
+    val status: String = "AVAILABLE",
+    val imageUrl: String? = null,
+    val notes: String? = null
+)
+
+@Serializable
 data class GarmentResponse(
     val id: String,
     val userId: String,
