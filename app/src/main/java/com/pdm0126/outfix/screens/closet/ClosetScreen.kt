@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -442,25 +443,13 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                 indication = null
                             ) {
                                 if (plannerDay != null) {
-                                    val dayInfo = com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.find { it.day == plannerDay }
-                                    if (dayInfo != null) {
-                                        fun parseColorOrDefault(hex: String?, default: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Black): androidx.compose.ui.graphics.Color {
-                                            return try {
-                                                if (hex.isNullOrBlank()) default else androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(hex))
-                                            } catch(e: Exception) { default }
-                                        }
-                                        
-                                        dayInfo.topColor = parseColorOrDefault(selectedTop?.colorHex, Color.White)
-                                        dayInfo.bottomColor = parseColorOrDefault(selectedBottom?.colorHex, Color.Black)
-                                        dayInfo.shoesColor = parseColorOrDefault(selectedShoes?.colorHex, Color.Black)
-                                        dayInfo.hatColor = selectedHead?.colorHex?.let { parseColorOrDefault(it) }
-                                        
-                                        dayInfo.topGarment = selectedTop
-                                        dayInfo.bottomGarment = selectedBottom
-                                        dayInfo.shoesGarment = selectedShoes
-                                        dayInfo.hatGarment = selectedHead
-                                        dayInfo.accessories = selectedAccessories.toList()
-                                    }
+                                    val capturedTop = selectedTop
+                                    val capturedBottom = selectedBottom
+                                    val capturedShoes = selectedShoes
+                                    val capturedHead = selectedHead
+                                    val capturedAccessories = selectedAccessories.toList()
+                                    val capturedDay = plannerDay!!
+
                                     selectedTop = null
                                     selectedBottom = null
                                     selectedShoes = null
@@ -468,8 +457,19 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                     selectedAccessories = emptyList()
                                     ClosetOverlayState.plannerEditDay = null
                                     com.pdm0126.outfix.ui.GlobalNavigationState.requestedTab = com.pdm0126.outfix.ui.OutFixScreen.WeeklyPlanner
+
+                                    coroutineScope.launch {
+                                        OutfixApplication.instance.plannerRepository.saveDayOutfit(
+                                            dayKey = capturedDay,
+                                            top = capturedTop,
+                                            bottom = capturedBottom,
+                                            shoes = capturedShoes,
+                                            head = capturedHead,
+                                            accessories = capturedAccessories
+                                        )
+                                    }
                                 } else {
-                                    /* TODO: Show success message or save outfit */ 
+                                    /* TODO: Show success message or save outfit */
                                 }
                             }
                             .clip(RoundedCornerShape(percent = 50)),

@@ -114,6 +114,10 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        com.pdm0126.outfix.OutfixApplication.instance.plannerRepository.restorePlannerDays()
+    }
+
     val backgroundLayer = rememberGraphicsLayer()
     var pagerCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
 
