@@ -486,8 +486,8 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                 )
                             ) {
                                 scale(
-                                    scaleX = 1f / buttonScale,
-                                    scaleY = 1f / buttonScale,
+                                    scaleX = 1f / (buttonScale * buttonScale),
+                                    scaleY = 1f / (buttonScale * buttonScale),
                                     pivot = center
                                 ) {
                                     translate(left = -buttonOffset.x, top = -buttonOffset.y) {
@@ -644,70 +644,46 @@ fun OutfitPreview(
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val defaultSkin = Color(0xFFEAC3AB)
-        
-        val topColor = remember(top?.colorHex) { top?.colorHex?.let { parseColorHex(it) } ?: defaultSkin }
-        val hasBottom = bottom != null
-        val bottomColor = remember(bottom?.colorHex) { bottom?.colorHex?.let { parseColorHex(it) } ?: defaultSkin }
-        val shoesColor = remember(shoes?.colorHex) { shoes?.colorHex?.let { parseColorHex(it) } }
-        val hatColor = remember(head?.colorHex) { head?.colorHex?.let { parseColorHex(it) } ?: defaultSkin }
-
         val headCategories = remember { listOf("Gafas", "Joyería") }
         val topCategories = remember { listOf("Bufanda", "Corbata") }
         val bottomCategories = remember { listOf("Reloj", "Cinturón") }
         val shoesCategories = remember { listOf("Bolso", "Mochila", "Otro") }
-        
-        Row(
+
+        val headAccs = remember(accessories) { accessories.filter { it.category in headCategories } }
+        val topAccs = remember(accessories) { accessories.filter { it.category in topCategories } }
+        val bottomAccs = remember(accessories) { accessories.filter { it.category in bottomCategories } }
+        val shoesAccs = remember(accessories) { accessories.filter { it.category in shoesCategories } }
+
+        val isDress = top?.category?.equals("Vestido", ignoreCase = true) == true
+
+        // Expanded white slot column — takes all remaining space
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+                .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
         ) {
-            val isDress = top?.category?.equals("Vestido", ignoreCase = true) == true
-            
-            Column(
-                modifier = Modifier
-                    .width(76.dp)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
-                    .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-            ) {
-                UnifiedMainSlot("Cabeza", head, Modifier.weight(1f))
-                
-                if (isDress) {
-                    UnifiedMainSlot("Vestido", top, Modifier.weight(2f))
-                } else {
-                    UnifiedMainSlot("Superior", top, Modifier.weight(1f))
-                    UnifiedMainSlot("Inferior", bottom, Modifier.weight(1f))
-                }
-                
-                UnifiedMainSlot("Calzado", shoes, Modifier.weight(1f))
-            }
-            
-            Column(modifier = Modifier.fillMaxHeight()) {
-                val headAccs = remember(accessories) { accessories.filter { it.category in headCategories } }
-                val topAccs = remember(accessories) { accessories.filter { it.category in topCategories } }
-                val bottomAccs = remember(accessories) { accessories.filter { it.category in bottomCategories } }
-                val shoesAccs = remember(accessories) { accessories.filter { it.category in shoesCategories } }
+            // Cabeza (small, weight 1)
+            SlotWithAccessories("Cabeza", head, headAccs, Modifier.weight(1f))
 
-                UnifiedAccessoryRow(headAccs, Modifier.weight(1f))
-                
-                if (isDress) {
-                    Column(modifier = Modifier.weight(2f)) {
-                        UnifiedAccessoryRow(topAccs, Modifier.weight(1f))
-                        UnifiedAccessoryRow(bottomAccs, Modifier.weight(1f))
-                    }
-                } else {
-                    UnifiedAccessoryRow(topAccs, Modifier.weight(1f))
-                    UnifiedAccessoryRow(bottomAccs, Modifier.weight(1f))
-                }
-                
-                UnifiedAccessoryRow(shoesAccs, Modifier.weight(1f))
+            if (isDress) {
+                // Vestido gets extra height (weight 3 = big)
+                SlotWithAccessories("Vestido", top, topAccs, Modifier.weight(3f))
+            } else {
+                // Superior and Inferior each weight 2 (bigger than head/shoes)
+                SlotWithAccessories("Superior", top, topAccs, Modifier.weight(2f))
+                SlotWithAccessories("Inferior", bottom, bottomAccs, Modifier.weight(2f))
             }
+
+            // Calzado (weight 1.5 — between main and head)
+            SlotWithAccessories("Calzado", shoes, shoesAccs, Modifier.weight(1.5f))
         }
 
+        Spacer(modifier = Modifier.width(10.dp))
+
+        // Character preview
         Box(modifier = Modifier.fillMaxHeight().aspectRatio(0.5f)) {
             com.pdm0126.outfix.ui.CharacterWithClothes(
                 top = top,
@@ -720,6 +696,61 @@ fun OutfitPreview(
         }
     }
 }
+
+/** A garment slot that shows the main item plus any accessories as small chips at the bottom. */
+@Composable
+fun SlotWithAccessories(
+    title: String,
+    mainItem: GarmentResponse?,
+    accessories: List<GarmentResponse>,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        // Main garment image
+        if (mainItem != null) {
+            AsyncImage(
+                model = mainItem.imageUrl,
+                contentDescription = mainItem.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(4.dp)
+            )
+        }
+
+        // Accessories as small chips at the bottom-start
+        if (accessories.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                accessories.take(3).forEach { acc ->
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFF6EEE6))
+                            .border(0.5.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = acc.imageUrl,
+                            contentDescription = acc.name,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(2.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 
 
 @Composable
