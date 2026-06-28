@@ -72,6 +72,9 @@ fun GarmentDetailOverlay(
         var selectedSizeIndex by remember(activeGarment, selectedCategory) { 
             mutableStateOf(currentSizes.indexOf(activeGarment.size).takeIf { it >= 0 } ?: 2) 
         }
+        val initialSizeIndex = remember(activeGarment, selectedCategory) {
+            currentSizes.indexOf(activeGarment.size).takeIf { it >= 0 } ?: 2
+        }
 
         var showCategoryMenu by remember { mutableStateOf(false) }
         var isColorPickingMode by remember { mutableStateOf(false) }
@@ -81,7 +84,7 @@ fun GarmentDetailOverlay(
                          selectedColorHex != (activeGarment.colorHex ?: "#000000") ||
                          editBrand != (activeGarment.brand ?: "") ||
                          selectedStyle != (activeGarment.style ?: "casual") ||
-                         currentSizes.getOrNull(selectedSizeIndex) != (activeGarment.size ?: "")
+                         selectedSizeIndex != initialSizeIndex
 
         val transition = this.transition
         

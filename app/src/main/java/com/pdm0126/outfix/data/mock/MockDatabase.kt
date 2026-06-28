@@ -1,9 +1,36 @@
 package com.pdm0126.outfix.data.mock
 
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
+import androidx.compose.ui.graphics.Color
+import java.util.Calendar
 import java.util.UUID
 
+data class DayInfo(
+    val day: String,
+    val calendarDay: Int,
+    var topColor: Color,
+    var bottomColor: Color,
+    var shoesColor: Color,
+    var hatColor: Color?,
+    var topGarment: GarmentResponse? = null,
+    var bottomGarment: GarmentResponse? = null,
+    var shoesGarment: GarmentResponse? = null,
+    var hatGarment: GarmentResponse? = null,
+    var accessories: List<GarmentResponse> = emptyList()
+)
+
 object MockDatabase {
+
+    val plannerDays = androidx.compose.runtime.mutableStateListOf(
+        DayInfo("LUN", Calendar.MONDAY, Color.White, Color(0xFF90D5E1), Color(0xFF277636), Color(0xFF90D5E1)),
+        DayInfo("MAR", Calendar.TUESDAY, Color(0xFF67B0E8), Color.Black, Color.Black, null),
+        DayInfo("MIE", Calendar.WEDNESDAY, Color(0xFFFF85E2), Color.White, Color.Black, null),
+        DayInfo("JUE", Calendar.THURSDAY, Color(0xFFFF1010), Color.White, Color.White, Color(0xFFFF1010)),
+        DayInfo("VIE", Calendar.FRIDAY, Color(0xFFE4A9B0), Color(0xFF94C4E1), Color(0xFFE4A9B0), null),
+        DayInfo("SAB", Calendar.SATURDAY, Color(0xFF4C8CA8), Color(0xFF033348), Color.Black, Color(0xFF4C8CA8)),
+        DayInfo("DOM", Calendar.SUNDAY, Color(0xFF8F8F8F), Color.Black, Color.Black, Color.Black)
+    )
+
 
     private val dummyUserId = UUID.randomUUID().toString()
 
@@ -475,6 +502,16 @@ object MockDatabase {
         val index = prendas.indexOfFirst { it.id == garment.id }
         if (index != -1) {
             prendas[index] = garment
+            
+            plannerDays.forEach { day ->
+                if (day.topGarment?.id == garment.id) day.topGarment = garment
+                if (day.bottomGarment?.id == garment.id) day.bottomGarment = garment
+                if (day.shoesGarment?.id == garment.id) day.shoesGarment = garment
+                if (day.hatGarment?.id == garment.id) day.hatGarment = garment
+                
+                day.accessories = day.accessories.map { if (it.id == garment.id) garment else it }
+            }
+            
             updateTrigger.value++
         }
     }

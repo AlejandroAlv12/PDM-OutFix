@@ -68,6 +68,10 @@ enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
     Profile("Profile", Icons.Outlined.Person)
 }
 
+object GlobalNavigationState {
+    var requestedTab by androidx.compose.runtime.mutableStateOf<OutFixScreen?>(null)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(onLogout: () -> Unit = {}) {
@@ -88,6 +92,16 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         val index = screens.indexOf(navigationState.topLevelRoute)
         if (pagerState.currentPage != index) {
             pagerState.animateScrollToPage(index)
+        }
+    }
+
+    LaunchedEffect(GlobalNavigationState.requestedTab) {
+        GlobalNavigationState.requestedTab?.let { targetTab ->
+            val index = screens.indexOf(targetTab)
+            if (index != -1) {
+                navigationState.topLevelRoute = targetTab
+            }
+            GlobalNavigationState.requestedTab = null
         }
     }
 
