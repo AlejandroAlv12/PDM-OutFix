@@ -1034,19 +1034,33 @@ fun CategorySlider(
             }
         }
 
-        LazyRow(
-            modifier = Modifier.nestedScroll(nestedScrollConnection),
-            contentPadding = PaddingValues(horizontal = 24.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
-        ) {
-            items(filteredItems) { garment ->
-                GarmentCard(
-                    garment = garment,
-                    isSelected = garment == selectedItem || selectedItems.contains(garment),
-                    onClick = { onItemSelected(garment) },
-                    onLongClick = if (onItemLongClick != null) { { bounds -> onItemLongClick(garment, bounds) } } else null
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            LazyRow(
+                modifier = Modifier.nestedScroll(nestedScrollConnection).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredItems) { garment ->
+                    GarmentCard(
+                        garment = garment,
+                        isSelected = garment == selectedItem || selectedItems.contains(garment),
+                        onClick = { onItemSelected(garment) },
+                        onLongClick = if (onItemLongClick != null) { { bounds -> onItemLongClick(garment, bounds) } } else null
+                    )
+                }
             }
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            0.0f to Color(0xFFEDDDCC),
+                            0.05f to Color.Transparent,
+                            0.95f to Color.Transparent,
+                            1.0f to Color(0xFFEDDDCC)
+                        )
+                    )
+            )
         }
     }
 }
