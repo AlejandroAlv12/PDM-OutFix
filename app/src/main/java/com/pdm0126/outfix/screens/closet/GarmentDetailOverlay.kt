@@ -50,7 +50,8 @@ fun GarmentDetailOverlay(
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     onDismiss: () -> Unit,
     onUpdate: (GarmentResponse) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null
 ) {
     AnimatedVisibility(
         visible = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive,
@@ -152,6 +153,7 @@ fun GarmentDetailOverlay(
                     .onGloballyPositioned { screenCoords = it }
                     .drawWithContent {
                         backgroundLayer.record {
+                            appBackgroundLayer?.let { drawLayer(it) }
                             this@drawWithContent.drawContent()
                         }
                         drawLayer(backgroundLayer)

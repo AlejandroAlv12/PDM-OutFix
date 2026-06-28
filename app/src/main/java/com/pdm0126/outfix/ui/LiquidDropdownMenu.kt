@@ -302,6 +302,11 @@ fun LiquidWheelPickerOverlay(
             .width(with(density) { currentWidthPx.toDp() })
             .height(with(density) { currentHeightPx.toDp() })
     ) {
+        val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
+        val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
+        val totalAlpha = (baseColor.alpha + overlayColor.alpha).coerceIn(0f, 1f)
+        val combinedTint = Color.Black.copy(alpha = totalAlpha)
+
         if (Build.VERSION.SDK_INT >= 31) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize().liquidGlass(
                 blur = 30f,
@@ -310,7 +315,8 @@ fun LiquidWheelPickerOverlay(
                 curve = 0.05f,
                 dispersion = 0.25f,
                 normalizedRadius = 0.15f,
-                cornerRadius = cornerRadiusDp
+                cornerRadius = cornerRadiusDp,
+                tint = combinedTint
             )) {
                 scale(scaleX = 1f, scaleY = 1f, pivot = Offset(size.width / 2f, -visualTopYPx)) {
                     if (screenCoords?.isAttached == true) {
@@ -322,11 +328,8 @@ fun LiquidWheelPickerOverlay(
             }
         } else {
             Box(modifier = Modifier.matchParentSize().background(Color.White))
+            Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
         }
-
-        val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
-        val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
-        Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
 
         Box(modifier = Modifier.fillMaxWidth().offset { androidx.compose.ui.unit.IntOffset(0, contentOffsetYPx.roundToInt()) }) {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -486,6 +489,11 @@ fun LiquidDropdownOverlay(
                 }
             }
     ) {
+        val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
+        val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
+        val totalAlpha = (baseColor.alpha + overlayColor.alpha).coerceIn(0f, 1f)
+        val combinedTint = Color.Black.copy(alpha = totalAlpha)
+
         if (Build.VERSION.SDK_INT >= 31) {
             androidx.compose.foundation.Canvas(
                 modifier = Modifier
@@ -497,7 +505,8 @@ fun LiquidDropdownOverlay(
                         curve = 0.05f,
                         dispersion = 0.25f,
                         normalizedRadius = 0.15f,
-                        cornerRadius = cornerRadius
+                        cornerRadius = cornerRadius,
+                        tint = combinedTint
                     )
             ) {
                 scale(scaleX = 1f / menuScale, scaleY = 1f / menuScale, pivot = Offset(size.width / 2f, 0f)) {
@@ -513,11 +522,8 @@ fun LiquidDropdownOverlay(
             }
         } else {
             Box(modifier = Modifier.matchParentSize().background(Color.White))
+            Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
         }
-
-        val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
-        val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
-        Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(

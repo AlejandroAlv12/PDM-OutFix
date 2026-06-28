@@ -143,7 +143,18 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "AuthAlpha"
     ) { if (it) 1f else 0f }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val globalAppLayer = rememberGraphicsLayer()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .drawWithContent {
+                globalAppLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(globalAppLayer)
+            }
+    ) {
         
         Box(
             modifier = Modifier
@@ -474,6 +485,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         com.pdm0126.outfix.screens.closet.GarmentDetailOverlay(
             garment = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarment,
             sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarmentBounds,
+            appBackgroundLayer = globalAppLayer,
             onDismiss = { com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false },
             onUpdate = { updatedGarment ->
                 com.pdm0126.outfix.data.mock.MockDatabase.updateGarment(updatedGarment)

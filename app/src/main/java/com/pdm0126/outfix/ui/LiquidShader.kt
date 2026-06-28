@@ -17,7 +17,8 @@ fun Modifier.liquidGlass(
     dispersion: Float = 0.05f,
     edge: Float = 2f,
     normalizedRadius: Float = 0.5f,
-    cornerRadius: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp.Unspecified
+    cornerRadius: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp.Unspecified,
+    tint: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent
 ) = this.graphicsLayer {
     if (Build.VERSION.SDK_INT >= 31 && size.width > 0f) {
         val blurEffect = android.graphics.RenderEffect.createBlurEffect(
@@ -48,8 +49,13 @@ fun Modifier.liquidGlass(
             shader.setFloatUniform("curve", curve)
             val minDimension = minOf(size.width, size.height)
             shader.setFloatUniform("edge", edge / minDimension)
-            shader.setColorUniform("tint", android.graphics.Color.argb(0, 0, 0, 0))
-            shader.setFloatUniform("saturation", 1.0f)
+            shader.setColorUniform("tint", android.graphics.Color.argb(
+                (tint.alpha * 255).toInt(),
+                (tint.red * 255).toInt(),
+                (tint.green * 255).toInt(),
+                (tint.blue * 255).toInt()
+            ))
+            shader.setFloatUniform("saturation", saturation)
             shader.setFloatUniform("dispersion", dispersion)
             shader.setFloatUniform("contrast", 1.0f)
 
