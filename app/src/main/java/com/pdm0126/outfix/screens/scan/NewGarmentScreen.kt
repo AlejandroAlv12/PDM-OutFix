@@ -278,35 +278,16 @@ fun NewGarmentScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                var isMenuPressed by remember { mutableStateOf(false) }
-                val menuScale by animateFloatAsState(
-                    targetValue = if (isMenuPressed) 0.95f else 1f,
-                    animationSpec = spring(stiffness = 400f),
-                    label = "menuScale"
+                com.pdm0126.outfix.ui.LiquidDropdownButton(
+                    selectedItem = selectedCategory,
+                    isExpanded = showCategoryMenu,
+                    onClick = {
+                        focusManager.clearFocus()
+                        showCategoryMenu = true 
+                    },
+                    onGloballyPositioned = { buttonCoords = it },
+                    modifier = Modifier.wrapContentSize(Alignment.TopStart).zIndex(10f)
                 )
-                val cornerRadius by animateDpAsState(
-                    targetValue = if (showCategoryMenu) 24.dp else 50.dp,
-                    animationSpec = tween(400),
-                    label = "cornerRadius"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .wrapContentSize(Alignment.TopStart)
-                        .zIndex(10f)
-                        .alpha(if (showCategoryMenu || menuProgress > 0f) 0f else 1f)
-                ) {
-                    com.pdm0126.outfix.ui.LiquidDropdownButton(
-                        selectedItem = selectedCategory,
-                        onClick = {
-                            focusManager.clearFocus()
-                            showCategoryMenu = true 
-                        },
-                        onGloballyPositioned = { buttonCoords = it },
-                        modifier = Modifier.zIndex(10f),
-                        alpha = if (showCategoryMenu || menuProgress > 0f) 0f else 1f
-                    )
-                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
 

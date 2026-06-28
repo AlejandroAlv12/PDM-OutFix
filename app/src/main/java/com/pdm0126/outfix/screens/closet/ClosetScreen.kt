@@ -7,6 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -72,24 +76,55 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
     } else {
         val slidersLayer = rememberGraphicsLayer()
         var rootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+        
+        var isDropdownExpanded by remember { mutableStateOf(false) }
+        var dropdownSelectedTitle by remember { mutableStateOf("") }
+        var dropdownButtonCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+        var dropdownItems by remember { mutableStateOf<List<String>>(emptyList()) }
+        var dropdownSelected by remember { mutableStateOf("") }
+        var dropdownOnSelect by remember { mutableStateOf<(String) -> Unit>({}) }
 
+        val handleOpenDropdown: (String, androidx.compose.ui.layout.LayoutCoordinates, List<String>, String, (String) -> Unit) -> Unit =
+            { title, coords, items, selected, onSelect ->
+                dropdownSelectedTitle = title
+                dropdownButtonCoords = coords
+                dropdownItems = items
+                dropdownSelected = selected
+                dropdownOnSelect = {
+                    onSelect(it)
+                    isDropdownExpanded = false
+                }
+                isDropdownExpanded = true
+            }
+
+        val rootLayer = rememberGraphicsLayer()
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .onGloballyPositioned { rootCoords = it }
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawWithContent {
-                        slidersLayer.record {
-                            drawRect(Color(0xFFEDDDCC))
+                        rootLayer.record {
                             this@drawWithContent.drawContent()
                         }
-                        drawLayer(slidersLayer)
+                        drawLayer(rootLayer)
                     }
-                    .verticalScroll(rememberScrollState())
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            slidersLayer.record {
+                                drawRect(Color(0xFFEDDDCC))
+                                this@drawWithContent.drawContent()
+                            }
+                            drawLayer(slidersLayer)
+                        }
+                        .verticalScroll(rememberScrollState())
+                ) {
                 Spacer(modifier = Modifier.height(402.dp))
 
                 val tops = remember(garments) { garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
@@ -104,12 +139,14 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     title = "superior",
                     items = tops,
                     selectedItem = selectedTop,
+                    isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "superior",
                     onItemSelected = { 
                         selectedTop = if (selectedTop == it) null else it 
                         if (selectedTop?.category?.equals("Vestido", ignoreCase = true) == true) {
                             selectedBottom = null
                         }
-                    }
+                    },
+                    onOpenDropdown = handleOpenDropdown
                 )
 
                 androidx.compose.animation.AnimatedVisibility(
@@ -121,7 +158,9 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         title = "inferior",
                         items = bottoms,
                         selectedItem = selectedBottom,
-                        onItemSelected = { selectedBottom = if (selectedBottom == it) null else it }
+                        isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "inferior",
+                        onItemSelected = { selectedBottom = if (selectedBottom == it) null else it },
+                        onOpenDropdown = handleOpenDropdown
                     )
                 }
 
@@ -129,7 +168,9 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     title = "calzado",
                     items = shoes,
                     selectedItem = selectedShoes,
-                    onItemSelected = { selectedShoes = if (selectedShoes == it) null else it }
+                    isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "calzado",
+                    onItemSelected = { selectedShoes = if (selectedShoes == it) null else it },
+                    onOpenDropdown = handleOpenDropdown
                 )
 
                 if (headwear.isNotEmpty()) {
@@ -137,7 +178,9 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         title = "cabeza",
                         items = headwear,
                         selectedItem = selectedHead,
-                        onItemSelected = { selectedHead = if (selectedHead == it) null else it }
+                        isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "cabeza",
+                        onItemSelected = { selectedHead = if (selectedHead == it) null else it },
+                        onOpenDropdown = handleOpenDropdown
                     )
                 }
 
@@ -146,6 +189,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         title = "accesorios",
                         items = accessories,
                         selectedItems = selectedAccessories,
+                        isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "accesorios",
                         onItemSelected = { clickedItem ->
                             val currentCategory = clickedItem.category
                             val isAlreadySelected = selectedAccessories.contains(clickedItem)
@@ -163,7 +207,8 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                 }
                                 selectedAccessories = filtered + clickedItem
                             }
-                        }
+                        },
+                        onOpenDropdown = handleOpenDropdown
                     )
                 }
                 
@@ -214,7 +259,6 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .height(50.dp)
-                        .width(220.dp)
                         .onGloballyPositioned { coords -> 
                             if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                 try {
@@ -245,7 +289,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                 ) {
                     if (android.os.Build.VERSION.SDK_INT >= 31) {
                         androidx.compose.foundation.Canvas(
-                            modifier = Modifier.fillMaxSize().liquidGlass(
+                            modifier = Modifier.matchParentSize().liquidGlass(
                                 blur = 12f,
                                 saturation = 1.2f,
                                 refraction = 0.5f,
@@ -265,20 +309,36 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                             }
                         }
                     } else {
-                        Box(modifier = Modifier.fillMaxSize().background(LimeGreen))
+                        Box(modifier = Modifier.matchParentSize().background(LimeGreen))
                     }
-                    Box(modifier = Modifier.fillMaxSize().background(LimeGreen.copy(alpha = 0.40f)))
+                    Box(modifier = Modifier.matchParentSize().background(LimeGreen.copy(alpha = 0.40f)))
                     
                     Row(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxHeight().padding(horizontal = 24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Text("Guardar outfit", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Icon(imageVector = Icons.Rounded.Add, contentDescription = "Add", tint = Color.White)
                     }
                 }
+                           Spacer(modifier = Modifier.height(24.dp))
             }
+            
+            }
+
+            com.pdm0126.outfix.ui.LiquidWheelPickerOverlay(
+                isExpanded = isDropdownExpanded,
+                onDismissRequest = { isDropdownExpanded = false },
+                buttonCoords = dropdownButtonCoords,
+                targetWidth = 160.dp,
+                backgroundLayer = rootLayer,
+                screenCoords = rootCoords,
+                items = dropdownItems,
+                selectedItem = dropdownSelected,
+                onItemSelected = dropdownOnSelect
+            )
         }
     }
 }
@@ -657,9 +717,10 @@ fun OutfitPreview(
                     val bottomWidth = topWidth + 15f * u
                     val skirtLength = 55f * u
                     val cr = 8f * u
+                    val skirtTop = legTop - 1f
                     
-                    moveTo(cx - topWidth, legTop)
-                    lineTo(cx + topWidth, legTop)
+                    moveTo(cx - topWidth, skirtTop)
+                    lineTo(cx + topWidth, skirtTop)
                     
                     lineTo(cx + bottomWidth - 2.5f * u, legTop + skirtLength - cr)
                     
@@ -824,26 +885,39 @@ fun UnifiedMainSlot(title: String, mainItem: GarmentResponse?, modifier: Modifie
 
 @Composable
 fun UnifiedAccessoryRow(accessories: List<GarmentResponse>, modifier: Modifier = Modifier) {
-    Row(
+    androidx.compose.animation.AnimatedContent(
+        targetState = accessories.take(2),
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        accessories.take(2).forEach { acc ->
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White)
-                    .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = acc.imageUrl,
-                    contentDescription = acc.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().padding(2.dp)
-                )
+        transitionSpec = {
+            androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.spring(stiffness = 300f)) togetherWith 
+            androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.spring(stiffness = 300f)) using
+            androidx.compose.animation.SizeTransform(
+                clip = false,
+                sizeAnimationSpec = { _, _ -> androidx.compose.animation.core.spring(stiffness = 300f, dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy) }
+            )
+        },
+        label = "AccessoryRowAnimation"
+    ) { currentAccessories ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            currentAccessories.forEach { acc ->
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = acc.imageUrl,
+                        contentDescription = acc.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(2.dp)
+                    )
+                }
             }
         }
     }
@@ -855,38 +929,42 @@ fun CategorySlider(
     items: List<GarmentResponse>,
     selectedItem: GarmentResponse? = null,
     selectedItems: List<GarmentResponse> = emptyList(),
-    onItemSelected: (GarmentResponse) -> Unit
+    isDropdownExpanded: Boolean = false,
+    onItemSelected: (GarmentResponse) -> Unit,
+    onOpenDropdown: (String, androidx.compose.ui.layout.LayoutCoordinates, List<String>, String, (String) -> Unit) -> Unit
 ) {
     if (items.isEmpty()) return
 
+    val titleCapitalized = title.replaceFirstChar { it.uppercase() }
+
+    var selectedCategoryFilter by remember { mutableStateOf(titleCapitalized) }
+    var buttonCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    
+    val availableCategories = remember(items) { 
+        (listOf(titleCapitalized) + items.mapNotNull { it.category }.map { it.lowercase().replaceFirstChar { c -> c.uppercase() } }.sorted()).distinct()
+    }
+    
+    val filteredItems = remember(items, selectedCategoryFilter) {
+        if (selectedCategoryFilter == titleCapitalized) items 
+        else items.filter { it.category?.lowercase()?.equals(selectedCategoryFilter.lowercase()) == true }
+    }
+
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
         Row(
-            modifier = Modifier.padding(horizontal = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.Black)
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = title,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
+            com.pdm0126.outfix.ui.LiquidDropdownButton(
+                selectedItem = selectedCategoryFilter,
+                isExpanded = isDropdownExpanded,
+                onClick = {
+                    if (buttonCoords != null) {
+                        onOpenDropdown(title, buttonCoords!!, availableCategories, selectedCategoryFilter) { selectedCategoryFilter = it }
+                    }
+                },
+                onGloballyPositioned = { buttonCoords = it }
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Box(
                 modifier = Modifier
@@ -924,7 +1002,7 @@ fun CategorySlider(
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
         ) {
-            items(items) { garment ->
+            items(filteredItems) { garment ->
                 GarmentCard(
                     garment = garment,
                     isSelected = garment == selectedItem || selectedItems.contains(garment),

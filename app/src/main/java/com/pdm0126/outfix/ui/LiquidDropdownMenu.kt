@@ -1,6 +1,7 @@
 package com.pdm0126.outfix.ui
 
 import android.os.Build
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -13,8 +14,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,18 +50,50 @@ import kotlin.math.roundToInt
 @Composable
 fun LiquidDropdownButton(
     selectedItem: String,
+    isExpanded: Boolean,
     onClick: () -> Unit,
     onGloballyPositioned: (LayoutCoordinates) -> Unit,
-    modifier: Modifier = Modifier,
-    alpha: Float = 1f
+    modifier: Modifier = Modifier
 ) {
+    val menuProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+        label = "buttonProgress"
+    )
+
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(stiffness = 400f),
+        label = "buttonScale"
+    )
+
+    val currentAlpha = if (isExpanded || menuProgress > 0f) 0f else 1f
+
     Box(
         modifier = modifier
-            .graphicsLayer { this.alpha = alpha }
+            .graphicsLayer { 
+                this.alpha = currentAlpha
+                this.scaleX = scale
+                this.scaleY = scale
+            }
+            .animateContentSize(
+                animationSpec = spring(stiffness = 300f, dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy)
+            )
             .clip(RoundedCornerShape(50))
             .background(Color.Black)
             .onGloballyPositioned { onGloballyPositioned(it) }
-            .clickable(onClick = onClick)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    isPressed = true
+                    val up = waitForUpOrCancellation()
+                    isPressed = false
+                    if (up != null) {
+                        onClick()
+                    }
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -85,6 +120,260 @@ fun LiquidDropdownButton(
                     strokeWidth = strokeWidth,
                     cap = StrokeCap.Round
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun LiquidWheelPickerOverlay(
+    isExpanded: Boolean,
+    onDismissRequest: () -> Unit,
+    buttonCoords: LayoutCoordinates?,
+    targetWidth: Dp,
+    backgroundLayer: GraphicsLayer,
+    screenCoords: LayoutCoordinates?,
+    items: List<String>,
+    selectedItem: String,
+    onItemSelected: (String) -> Unit
+) {
+    val menuProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+        label = "menuProgress"
+    )
+
+    val showOverlay = isExpanded || (menuProgress > 0f)
+    if (!showOverlay || buttonCoords?.isAttached != true) return
+
+    // Full screen box moved down
+
+    val density = LocalDensity.current
+    val buttonWidthPx = with(density) { buttonCoords.size.width.toFloat() }
+    val buttonHeightPx = with(density) { buttonCoords.size.height.toFloat() }
+
+    val screenPos = if (screenCoords?.isAttached == true) screenCoords.positionInRoot() else Offset.Zero
+    val buttonPos = buttonCoords.positionInRoot()
+    
+    val baseYOffsetPx = buttonPos.y - screenPos.y
+    val startXOffsetPx = buttonPos.x - screenPos.x
+
+    val sortedItems = remember(items) { 
+        val priorityKeywords = listOf("todo", "superior", "inferior", "cabeza", "calzado", "accesorios")
+        items.sortedWith { a, b ->
+            val aIsPriority = priorityKeywords.contains(a.lowercase())
+            val bIsPriority = priorityKeywords.contains(b.lowercase())
+            if (aIsPriority && !bIsPriority) -1
+            else if (!aIsPriority && bIsPriority) 1
+            else 0
+        }
+    }
+    val initialSelectedIndex = remember(sortedItems, selectedItem) { 
+        sortedItems.indexOf(selectedItem).takeIf { it >= 0 } ?: 0 
+    }
+
+    var dragYOffsetPx by remember { mutableFloatStateOf(0f) }
+    var previousIsExpanded by remember { mutableStateOf(false) }
+
+    if (isExpanded && !previousIsExpanded) {
+        dragYOffsetPx = -(initialSelectedIndex * buttonHeightPx)
+        previousIsExpanded = true
+    } else if (!isExpanded && previousIsExpanded) {
+        previousIsExpanded = false
+    }
+
+    val isMenuOpening = isExpanded && menuProgress < 1f
+    
+    val animatedDragYOffsetPx by animateFloatAsState(
+        targetValue = dragYOffsetPx,
+        animationSpec = if (isMenuOpening) androidx.compose.animation.core.snap() else spring(stiffness = 300f, dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy),
+        label = "dragYOffset"
+    )
+    
+    val currentDragY = if (isMenuOpening) dragYOffsetPx else animatedDragYOffsetPx
+    
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val currentIndex by remember {
+        derivedStateOf {
+            if (buttonHeightPx > 0) {
+                (-currentDragY / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
+            } else 0
+        }
+    }
+    
+    LaunchedEffect(currentIndex) {
+        if (isExpanded) {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    val targetHeightPx = sortedItems.size * buttonHeightPx
+    val targetWidthPx = with(density) { targetWidth.toPx() }
+
+    val currentWidthPx = androidx.compose.ui.util.lerp(buttonWidthPx, targetWidthPx, menuProgress)
+    val currentHeightPx = androidx.compose.ui.util.lerp(buttonHeightPx, targetHeightPx, menuProgress)
+    
+    val visualTopYPx = androidx.compose.ui.util.lerp(0f, currentDragY, menuProgress)
+    val currentXPx = androidx.compose.ui.util.lerp(startXOffsetPx, startXOffsetPx - (targetWidthPx - buttonWidthPx) / 2, menuProgress)
+    
+    val cornerRadiusPx = androidx.compose.ui.util.lerp(buttonHeightPx / 2f, with(density) { 24.dp.toPx() }, menuProgress)
+    val cornerRadiusDp = with(density) { cornerRadiusPx.toDp() }
+    val contentOffsetYPx = currentDragY - visualTopYPx
+
+    if (isExpanded || menuProgress > 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        if (sortedItems.isNotEmpty()) {
+                            val finalIndex = if (buttonHeightPx > 0) {
+                                (-currentDragY / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
+                            } else 0
+                            onItemSelected(sortedItems[finalIndex])
+                        } else {
+                            onDismissRequest()
+                        }
+                    }
+                )
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .offset { androidx.compose.ui.unit.IntOffset(currentXPx.roundToInt(), (baseYOffsetPx + visualTopYPx).roundToInt()) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                        val index = (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
+                        dragYOffsetPx = -index * buttonHeightPx
+                    },
+                    onDragCancel = {
+                        val index = (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
+                        dragYOffsetPx = -index * buttonHeightPx
+                    }
+                ) { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
+                    change.consume()
+                    val maxScroll = 0f
+                    val minScroll = -((sortedItems.size - 1) * buttonHeightPx)
+                    dragYOffsetPx = (dragYOffsetPx + dragAmount).coerceIn(minScroll, maxScroll)
+                }
+            }
+            .graphicsLayer {
+                transformOrigin = TransformOrigin(0.5f, if (currentHeightPx > 0) -visualTopYPx / currentHeightPx else 0f)
+            }
+            .clip(RoundedCornerShape(cornerRadiusDp))
+            .width(with(density) { currentWidthPx.toDp() })
+            .height(with(density) { currentHeightPx.toDp() })
+    ) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize().liquidGlass(
+                blur = 30f,
+                saturation = 1.4f,
+                refraction = 0.5f,
+                curve = 0.05f,
+                dispersion = 0.25f,
+                normalizedRadius = 0.15f,
+                cornerRadius = cornerRadiusDp
+            )) {
+                scale(scaleX = 1f, scaleY = 1f, pivot = Offset(size.width / 2f, -visualTopYPx)) {
+                    if (screenCoords?.isAttached == true) {
+                        translate(left = -currentXPx, top = -(baseYOffsetPx + visualTopYPx)) {
+                            drawLayer(backgroundLayer)
+                        }
+                    }
+                }
+            }
+        } else {
+            Box(modifier = Modifier.matchParentSize().background(Color.White))
+        }
+
+        val overlayColor = Color.Black.copy(alpha = androidx.compose.ui.util.lerp(0f, 0.4f, menuProgress))
+        val baseColor = Color.Black.copy(alpha = 1f - menuProgress)
+        Box(modifier = Modifier.matchParentSize().background(baseColor).background(overlayColor))
+
+        Box(modifier = Modifier.fillMaxWidth().offset { androidx.compose.ui.unit.IntOffset(0, contentOffsetYPx.roundToInt()) }) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                sortedItems.forEachIndexed { index, item ->
+                    val itemCenterY = index * buttonHeightPx + buttonHeightPx / 2f
+                    val lensCenterY = -currentDragY + buttonHeightPx / 2f
+                    val distance = Math.abs(itemCenterY - lensCenterY)
+                    val selectionWeight = (1f - (distance / buttonHeightPx)).coerceIn(0f, 1f)
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(with(density) { buttonHeightPx.toDp() })
+                            .padding(horizontal = 16.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                dragYOffsetPx = -index * buttonHeightPx
+                                onItemSelected(item)
+                            },
+                        contentAlignment = androidx.compose.ui.BiasAlignment(androidx.compose.ui.util.lerp(-1f, 0f, menuProgress), 0f)
+                    ) {
+                        Text(
+                            text = item,
+                            color = Color.White.copy(alpha = androidx.compose.ui.util.lerp(0.5f, 1f, selectionWeight)),
+                            fontWeight = if (selectionWeight > 0.8f) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+        
+        androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
+            val indicatorTop = -visualTopYPx
+            val indicatorBottom = -visualTopYPx + buttonHeightPx
+            
+            val lineColor = Color.White.copy(alpha = 0.3f * menuProgress)
+            val lineLength = size.width * 0.8f
+            val startX = (size.width - lineLength) / 2f
+            val endX = startX + lineLength
+            
+            drawLine(
+                color = lineColor,
+                start = Offset(startX, indicatorTop),
+                end = Offset(endX, indicatorTop),
+                strokeWidth = 1.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            
+            drawLine(
+                color = lineColor,
+                start = Offset(startX, indicatorBottom),
+                end = Offset(endX, indicatorBottom),
+                strokeWidth = 1.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+        
+        if (menuProgress < 1f) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(with(density) { buttonHeightPx.toDp() })
+                    .offset { androidx.compose.ui.unit.IntOffset(0, -visualTopYPx.roundToInt()) }
+                    .padding(horizontal = 16.dp)
+                    .graphicsLayer { alpha = 1f - menuProgress },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 12.dp, height = 7.dp)) {
+                    val strokeWidth = 2.dp.toPx()
+                    val startX = 1.dp.toPx()
+                    val centerX = 6.dp.toPx()
+                    val endX = 11.dp.toPx()
+                    val topY = 1.dp.toPx()
+                    val bottomY = 6.dp.toPx()
+                    drawLine(color = Color.White, start = Offset(startX, topY), end = Offset(centerX, bottomY), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+                    drawLine(color = Color.White, start = Offset(endX, topY), end = Offset(centerX, bottomY), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+                }
             }
         }
     }
