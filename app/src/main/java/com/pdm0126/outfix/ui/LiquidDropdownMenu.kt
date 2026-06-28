@@ -255,6 +255,8 @@ fun LiquidWheelPickerOverlay(
         modifier = Modifier
             .offset { androidx.compose.ui.unit.IntOffset(currentXPx.roundToInt(), (baseYOffsetPx + visualTopYPx).roundToInt()) }
             .pointerInput(Unit) {
+                var hitTopLimit = false
+                var hitBottomLimit = false
                 detectVerticalDragGestures(
                     onDragEnd = {
                         val index = (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
@@ -264,11 +266,32 @@ fun LiquidWheelPickerOverlay(
                         val index = (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
                         dragYOffsetPx = -index * buttonHeightPx
                     }
-                ) { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
+                ) { change, dragAmount ->
                     change.consume()
                     val maxScroll = 0f
                     val minScroll = -((sortedItems.size - 1) * buttonHeightPx)
-                    dragYOffsetPx = (dragYOffsetPx + dragAmount).coerceIn(minScroll, maxScroll)
+                    
+                    val newDrag = dragYOffsetPx + dragAmount
+                    
+                    if (newDrag > maxScroll) {
+                        if (!hitTopLimit) {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            hitTopLimit = true
+                        }
+                    } else {
+                        hitTopLimit = false
+                    }
+                    
+                    if (newDrag < minScroll) {
+                        if (!hitBottomLimit) {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            hitBottomLimit = true
+                        }
+                    } else {
+                        hitBottomLimit = false
+                    }
+                    
+                    dragYOffsetPx = newDrag.coerceIn(minScroll, maxScroll)
                 }
             }
             .graphicsLayer {
