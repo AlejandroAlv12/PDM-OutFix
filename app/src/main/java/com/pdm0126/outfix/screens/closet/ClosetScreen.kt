@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
-import com.pdm0126.outfix.data.mock.MockDatabase
+import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -69,8 +69,9 @@ object ClosetOverlayState {
 @Composable
 fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     val coroutineScope = rememberCoroutineScope()
-    var garments by remember { mutableStateOf<List<GarmentResponse>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    val repository = OutfixApplication.instance.garmentRepository
+    val garments by repository.garmentsFlow.collectAsState(initial = emptyList())
+    var isLoading by remember { mutableStateOf(false) }
 
     var selectedTop by viewModel::selectedTop
     var selectedBottom by viewModel::selectedBottom
@@ -93,9 +94,9 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
         }
     }
 
-    LaunchedEffect(MockDatabase.updateTrigger.value) {
+    LaunchedEffect(Unit) {
         isLoading = true
-        garments = MockDatabase.getGarments()
+        repository.refreshGarments()
         isLoading = false
     }
 

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -26,7 +27,7 @@ android {
         if (localPropertiesFile.exists()) {
             localProperties.load(FileInputStream(localPropertiesFile))
         }
-        val rawBackendUrl = localProperties.getProperty("BACKEND_URL") ?: "http://10.0.2.2:8080/"
+        val rawBackendUrl = localProperties.getProperty("BACKEND_URL")?.replace("\"", "")?.replace("'", "") ?: "http://10.0.2.2:8080/"
         
         buildConfigField("String", "BASE_URL", "\"$rawBackendUrl\"")
     }
@@ -78,6 +79,10 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
