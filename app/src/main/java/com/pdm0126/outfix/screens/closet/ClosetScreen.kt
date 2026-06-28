@@ -123,6 +123,12 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
 
         val rootLayer = rememberGraphicsLayer()
         
+        val tops = remember(garments) { garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
+        val bottoms = remember(garments) { garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
+        val shoes = remember(garments) { garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
+        val headwear = remember(garments) { garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") } }
+        val accessories = remember(garments) { garments.filter { it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
+        
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -151,12 +157,6 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         .verticalScroll(rememberScrollState())
                 ) {
                 Spacer(modifier = Modifier.height(402.dp))
-
-                val tops = remember(garments) { garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
-                val bottoms = remember(garments) { garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
-                val shoes = remember(garments) { garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
-                val headwear = remember(garments) { garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") } }
-                val accessories = remember(garments) { garments.filter { it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
 
                 val isDressSelected = selectedTop?.category?.equals("Vestido", ignoreCase = true) == true
                 
@@ -313,6 +313,95 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (plannerDay != null) {
+                        var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
+                        var isRandomPressedInstant by remember { mutableStateOf(false) }
+                        val randomScale by androidx.compose.animation.core.animateFloatAsState(
+                            targetValue = if (isRandomPressedInstant) 1.08f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = 400f
+                            ),
+                            label = "randomButtonScale"
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .onGloballyPositioned { coords -> 
+                                    if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
+                                        try {
+                                            randomButtonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
+                                        } catch (e: Exception) {}
+                                    }
+                                }
+                                .graphicsLayer {
+                                    scaleX = randomScale
+                                    scaleY = randomScale
+                                }
+                                .pointerInput(Unit) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        isRandomPressedInstant = true
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        waitForUpOrCancellation()
+                                        isRandomPressedInstant = false
+                                    }
+                                }
+                                .clickable(
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    val availableTops = tops.filter { it.status != "IN_WASH" }.ifEmpty { tops }
+                                    val availableBottoms = bottoms.filter { it.status != "IN_WASH" }.ifEmpty { bottoms }
+                                    val availableShoes = shoes.filter { it.status != "IN_WASH" }.ifEmpty { shoes }
+                                    
+                                    val randomTop = availableTops.randomOrNull()
+                                    if (randomTop != null) {
+                                        selectedTop = randomTop
+                                        if (randomTop.category.equals("Vestido", ignoreCase = true)) {
+                                            selectedBottom = null
+                                        } else {
+                                            val matchingBottoms = availableBottoms.filter { it.style == randomTop.style }
+                                            selectedBottom = if (matchingBottoms.isNotEmpty()) matchingBottoms.random() else availableBottoms.randomOrNull()
+                                        }
+                                        
+                                        val matchingShoes = availableShoes.filter { it.style == randomTop.style }
+                                        selectedShoes = if (matchingShoes.isNotEmpty()) matchingShoes.random() else availableShoes.randomOrNull()
+                                    }
+                                }
+                                .clip(androidx.compose.foundation.shape.CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                                androidx.compose.foundation.Canvas(
+                                    modifier = Modifier.matchParentSize().liquidGlass(
+                                        blur = 12f,
+                                        saturation = 1.2f,
+                                        refraction = 0.5f,
+                                        curve = 0.5f,
+                                        dispersion = 0.15f,
+                                        normalizedRadius = 0.5f
+                                    )
+                                ) {
+                                    scale(
+                                        scaleX = 1f / randomScale,
+                                        scaleY = 1f / randomScale,
+                                        pivot = center
+                                    ) {
+                                        translate(left = -randomButtonOffset.x, top = -randomButtonOffset.y) {
+                                            drawLayer(slidersLayer)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Box(modifier = Modifier.matchParentSize().background(Color(0xFF89CFF0)))
+                            }
+                            Box(modifier = Modifier.matchParentSize().background(Color(0xFF89CFF0).copy(alpha = 0.50f)))
+                            Icon(imageVector = androidx.compose.material.icons.Icons.Rounded.Shuffle, contentDescription = "Randomize", tint = Color.White)
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .height(50.dp)
