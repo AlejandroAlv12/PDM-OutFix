@@ -39,11 +39,24 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OutFixTheme(darkTheme = true) {
-                MainScreen(
-                    onLogout = {
-                        sessionManager.clearSession()
+                var showSplash by remember { mutableStateOf(!com.pdm0126.outfix.utils.SplashState.isFinished) }
+                
+                androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+                    MainScreen(
+                        onLogout = {
+                            sessionManager.clearSession()
+                        }
+                    )
+                    
+                    if (showSplash) {
+                        com.pdm0126.outfix.screens.splash.ClosetDoorsOverlay(
+                            onFinished = {
+                                com.pdm0126.outfix.utils.SplashState.isFinished = true
+                                showSplash = false
+                            }
+                        )
                     }
-                )
+                }
             }
         }
     }
