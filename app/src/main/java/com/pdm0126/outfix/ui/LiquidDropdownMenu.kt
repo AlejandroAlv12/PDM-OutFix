@@ -60,6 +60,7 @@ fun LiquidDropdownButton(
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
         label = "buttonProgress"
     )
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -90,6 +91,7 @@ fun LiquidDropdownButton(
                     val up = waitForUpOrCancellation()
                     isPressed = false
                     if (up != null) {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                         onClick()
                     }
                 }
@@ -201,7 +203,15 @@ fun LiquidWheelPickerOverlay(
         }
     }
     
-    LaunchedEffect(currentIndex) {
+    val targetIndex by remember {
+        derivedStateOf {
+            if (buttonHeightPx > 0) {
+                (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
+            } else 0
+        }
+    }
+    
+    LaunchedEffect(targetIndex) {
         if (isExpanded) {
             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
         }
