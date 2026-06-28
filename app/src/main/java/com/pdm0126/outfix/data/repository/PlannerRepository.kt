@@ -68,4 +68,25 @@ class PlannerRepository(
             }
         }
     }
+
+    suspend fun clearDayOutfit(dayKey: String) {
+        val entity = PlannerDayEntity(
+            dayKey = dayKey,
+            topGarmentId = null,
+            bottomGarmentId = null,
+            shoesGarmentId = null,
+            hatGarmentId = null,
+            accessoryIds = ""
+        )
+        withContext(Dispatchers.IO) {
+            plannerDayDao.upsertDay(entity)
+        }
+        MockDatabase.plannerDays.find { it.day == dayKey }?.let { dayInfo ->
+            dayInfo.topGarment = null
+            dayInfo.bottomGarment = null
+            dayInfo.shoesGarment = null
+            dayInfo.hatGarment = null
+            dayInfo.accessories = emptyList()
+        }
+    }
 }

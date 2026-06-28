@@ -180,4 +180,56 @@ class GarmentRepository(
             // Server unreachable — local DB already deleted it
         }
     }
+
+    /**
+     * marca prendas como 'IN_WASH' (envia al laundry).
+     */
+    suspend fun sendToLaundry(garments: List<GarmentResponse>) {
+        val updatedGarments = garments.map { it.copy(status = "IN_WASH") }
+        
+        withContext(Dispatchers.IO) {
+            garmentDao.insertGarments(updatedGarments.map { it.toEntity(isPendingSync = false) })
+        }
+        
+        // Actualiza las prendas en memoria
+        updatedGarments.forEach { garment ->
+            com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
+                if (day.topGarment?.id == garment.id) day.topGarment = garment
+                if (day.bottomGarment?.id == garment.id) day.bottomGarment = garment
+                if (day.shoesGarment?.id == garment.id) day.shoesGarment = garment
+                if (day.hatGarment?.id == garment.id) day.hatGarment = garment
+                day.accessories = day.accessories.map { if (it.id == garment.id) garment else it }
+            }
+        }
+        
+        // Intenta enviar al servidor
+        for (garment in updatedGarments) {
+            try {
+                val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
+                    name = garment.name,
+                    category = garment.category,
+                    colorHex = garment.colorHex,
+                    colorName = garment.colorName,
+                    style = garment.style,
+                    brand = garment.brand,
+                    size = garment.size,
+                    status = garment.status,
+                    imageUrl = garment.imageUrl,
+                    notes = garment.notes
+                )
+                RetrofitClient.garmentApi.updateGarment(garment.id, request)
+            } catch (e: Exception) {
+                // Ignora errores de red, se guarda localmente
+            }
+        }
+    }
+
+    /**
+     * marca una prenda como 'AVAILABLE' (lavada).
+     */
+    suspend fun markAsWashed(garmentId: String) {
+        val entity = withContext(Dispatchers.IO) { garmentDao.getGarmentById(garmentId) } ?: return
+        val updatedDto = entity.toDto().copy(status = "AVAILABLE")
+        updateGarment(updatedDto)
+    }
 }

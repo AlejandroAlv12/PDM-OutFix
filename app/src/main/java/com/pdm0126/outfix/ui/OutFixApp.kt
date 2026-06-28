@@ -114,8 +114,10 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         com.pdm0126.outfix.OutfixApplication.instance.plannerRepository.restorePlannerDays()
+        com.pdm0126.outfix.utils.LaundryManager.evaluatePassedDays(context)
     }
 
     val backgroundLayer = rememberGraphicsLayer()
