@@ -138,11 +138,14 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     val isOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive
     val isDayOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive
 
+    val isHamburgerOpen = HamburgerMenuState.isOpen
+
     val targetBlur = when {
         showAuthModal -> 30f
         showLogoutDialog -> 2f
         isOverlayActive -> 20f
         isDayOverlayActive -> 20f
+        isHamburgerOpen -> 20f
         else -> 0f
     }
     val blurDuration = when {
@@ -156,7 +159,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "BgBlur"
     )
 
-    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive
+    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive || isHamburgerOpen
 
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
@@ -205,7 +208,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                             .size(48.dp)
                             .clip(CircleShape)
                             .background(Color.Gray.copy(alpha = 0.5f))
-                            .clickable {  },
+                            .bouncyClickable { HamburgerMenuState.isOpen = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -555,6 +558,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 )
             }
         }
+
+        HamburgerMenuOverlay(appBackgroundLayer = globalAppLayer)
         
         com.pdm0126.outfix.screens.profile.LogoutDialogOverlay(
             showLogoutDialog = showLogoutDialog,

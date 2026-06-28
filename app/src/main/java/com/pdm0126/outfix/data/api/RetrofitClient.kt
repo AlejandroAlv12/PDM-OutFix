@@ -57,4 +57,8 @@ object RetrofitClient {
     val authApi: AuthApi by lazy {
         retrofit.create(AuthApi::class.java)
     }
+
+    val lentApi: LentApi by lazy {
+        retrofit.create(LentApi::class.java)
+    }
 }

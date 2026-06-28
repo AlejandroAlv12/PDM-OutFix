@@ -15,9 +15,14 @@ import java.util.UUID
 class GarmentRepository(
     private val garmentDao: GarmentDao
 ) {
-    // Flow of garments from local database (Single Source of Truth)
+    // Flow of ALL garments (includes LENT — used by lent panel selector)
     val garmentsFlow: Flow<List<GarmentResponse>> = garmentDao.getAllGarmentsFlow().map { entities ->
         entities.map { it.toDto() }
+    }
+
+    // Flow of AVAILABLE garments only (excludes LENT — used by the closet)
+    val availableGarmentsFlow: Flow<List<GarmentResponse>> = garmentDao.getAllGarmentsFlow().map { entities ->
+        entities.filter { it.status != "LENT" }.map { it.toDto() }
     }
 
     /**

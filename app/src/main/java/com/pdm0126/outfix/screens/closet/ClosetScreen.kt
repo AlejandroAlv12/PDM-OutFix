@@ -71,7 +71,7 @@ object ClosetOverlayState {
 fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     val coroutineScope = rememberCoroutineScope()
     val repository = OutfixApplication.instance.garmentRepository
-    val garments by repository.garmentsFlow.collectAsState(initial = emptyList())
+    val garments by repository.availableGarmentsFlow.collectAsState(initial = emptyList())
     var isLoading by remember { mutableStateOf(false) }
 
     var selectedTop by viewModel::selectedTop
