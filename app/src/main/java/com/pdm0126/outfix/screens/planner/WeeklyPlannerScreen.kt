@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.layout.boundsInRoot
 
 import java.util.Calendar
 
@@ -107,6 +109,12 @@ fun WeeklyPlannerScreen() {
                         ClosetOverlayState.hasLoadedPlannerDay = false
                         GlobalNavigationState.requestedTab = OutFixScreen.Closet
                         editingDay = null
+                    },
+                    onLongClick = { bounds ->
+                        ClosetOverlayState.detailDayInfo = d
+                        ClosetOverlayState.detailDayBounds = bounds
+                        ClosetOverlayState.isDayOverlayActive = true
+                        editingDay = null
                     }
                 )
             }
@@ -136,6 +144,12 @@ fun WeeklyPlannerScreen() {
                         ClosetOverlayState.plannerEditDay = d.day
                         ClosetOverlayState.hasLoadedPlannerDay = false
                         GlobalNavigationState.requestedTab = OutFixScreen.Closet
+                        editingDay = null
+                    },
+                    onLongClick = { bounds ->
+                        ClosetOverlayState.detailDayInfo = d
+                        ClosetOverlayState.detailDayBounds = bounds
+                        ClosetOverlayState.isDayOverlayActive = true
                         editingDay = null
                     }
                 )
@@ -167,6 +181,12 @@ fun WeeklyPlannerScreen() {
                     ClosetOverlayState.hasLoadedPlannerDay = false
                     GlobalNavigationState.requestedTab = OutFixScreen.Closet
                     editingDay = null
+                },
+                onLongClick = { bounds ->
+                    ClosetOverlayState.detailDayInfo = d
+                    ClosetOverlayState.detailDayBounds = bounds
+                    ClosetOverlayState.isDayOverlayActive = true
+                    editingDay = null
                 }
             )
         }
@@ -187,22 +207,33 @@ fun DayCard(
     isCurrentDay: Boolean = false,
     isEditing: Boolean = false,
     onClick: () -> Unit = {},
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onLongClick: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val cardLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
     var rootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var buttonCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
+    var cardBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
     Box(
         modifier = modifier
             .aspectRatio(0.48f)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(
+            .combinedClickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null
-            ) { onClick() }
-            .onGloballyPositioned { rootCoords = it }
+                indication = null,
+                onClick = { onClick() },
+                onLongClick = { 
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    cardBounds?.let { onLongClick?.invoke(it) }
+                }
+            )
+            .onGloballyPositioned { coords ->
+                rootCoords = coords
+                try { cardBounds = coords.boundsInRoot() } catch (e: Exception) {}
+            }
     ) {
     Column(
         modifier = Modifier

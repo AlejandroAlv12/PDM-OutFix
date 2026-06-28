@@ -132,11 +132,13 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "AuthTransition"
     )
     val isOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive
+    val isDayOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive
 
     val targetBlur = when {
         showAuthModal -> 30f
         showLogoutDialog -> 2f
         isOverlayActive -> 20f
+        isDayOverlayActive -> 20f
         else -> 0f
     }
     val blurDuration = when {
@@ -150,7 +152,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "BgBlur"
     )
 
-    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive
+    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive
 
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
@@ -508,6 +510,15 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             onDelete = { garmentId ->
                 com.pdm0126.outfix.data.mock.MockDatabase.deleteGarment(garmentId)
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false
+            }
+        )
+
+        com.pdm0126.outfix.screens.planner.DayDetailOverlay(
+            dayInfo = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailDayInfo,
+            sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailDayBounds,
+            appBackgroundLayer = globalAppLayer,
+            onDismiss = {
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive = false
             }
         )
 

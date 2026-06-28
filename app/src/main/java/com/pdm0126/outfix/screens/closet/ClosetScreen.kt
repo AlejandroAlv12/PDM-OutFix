@@ -60,6 +60,10 @@ object ClosetOverlayState {
     var isOverlayActive by androidx.compose.runtime.mutableStateOf(false)
     var plannerEditDay by androidx.compose.runtime.mutableStateOf<String?>(null)
     var hasLoadedPlannerDay by androidx.compose.runtime.mutableStateOf(false)
+    // Day detail overlay
+    var detailDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.mock.DayInfo?>(null)
+    var detailDayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    var isDayOverlayActive by androidx.compose.runtime.mutableStateOf(false)
 }
 
 @Composable
