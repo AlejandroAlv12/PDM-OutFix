@@ -117,9 +117,12 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         targetState = showAuthModal, 
         label = "AuthTransition"
     )
+    val isOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive
+
     val targetBlur = when {
         showAuthModal -> 30f
         showLogoutDialog -> 2f
+        isOverlayActive -> 20f
         else -> 0f
     }
     val blurDuration = when {
@@ -133,6 +136,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "BgBlur"
     )
 
+    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive
+
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
         label = "AuthAlpha"
@@ -143,7 +148,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (bgBlur > 0f && Build.VERSION.SDK_INT >= 31) Modifier.blur(bgBlur.dp) else Modifier)
+                .then(if (Build.VERSION.SDK_INT >= 31) Modifier.blur(bgBlur.dp) else Modifier)
         ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -465,6 +470,20 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             }
     }
         }
+
+        com.pdm0126.outfix.screens.closet.GarmentDetailOverlay(
+            garment = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarment,
+            sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarmentBounds,
+            onDismiss = { com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false },
+            onUpdate = { updatedGarment ->
+                com.pdm0126.outfix.data.mock.MockDatabase.updateGarment(updatedGarment)
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false
+            },
+            onDelete = { garmentId ->
+                com.pdm0126.outfix.data.mock.MockDatabase.deleteGarment(garmentId)
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive = false
+            }
+        )
 
         if (authAlpha > 0f) {
             Box(

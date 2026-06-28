@@ -84,14 +84,10 @@ import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val CATEGORIES = listOf(
-    "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo",
-    "Pantalón", "Jeans", "Short", "Falda",
-    "Gorra", "Sombrero", "Gorro", "Zapatillas", "Botas", "Zapatos", "Vestido", "Bolso", "Mochila", 
-    "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otro"
-)
-private val STYLES = listOf("casual", "formal", "deportiva", "verano", "invierno")
-private val SIZES = listOf("XS", "S", "M", "L", "XL")
+import com.pdm0126.outfix.data.GARMENT_CATEGORIES
+import com.pdm0126.outfix.data.GARMENT_STYLES
+import com.pdm0126.outfix.data.GARMENT_SIZES
+import com.pdm0126.outfix.ui.CustomSizeSlider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,8 +106,7 @@ fun NewGarmentScreen(
     var title by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "") }
     var selectedCategory by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "Camisa") }
     var showCategoryMenu by remember { mutableStateOf(false) }
-    val categories = CATEGORIES
-    val styles = STYLES
+    val categories = GARMENT_CATEGORIES
     var selectedStyle by remember { mutableStateOf("casual") }
     
     val colors = remember(detectedColors) {
@@ -205,13 +200,14 @@ fun NewGarmentScreen(
                             coroutineScope.launch {
                                 isSaving = true
                                 val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
-                                val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
-                                    name = title.ifBlank { selectedCategory },
-                                    category = selectedCategory,
-                                    colorHex = hexColor,
-                                    style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
-                                    brand = marcaEj.ifBlank { null },
-                                    size = SIZES.getOrNull(selectedSizeIndex),
+                                    val currentSizes = if (selectedCategory in com.pdm0126.outfix.data.SHOE_CATEGORIES) com.pdm0126.outfix.data.SHOE_SIZES else GARMENT_SIZES
+                                    val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
+                                        name = title.ifBlank { selectedCategory },
+                                        category = selectedCategory,
+                                        colorHex = hexColor,
+                                        style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
+                                        brand = marcaEj.ifBlank { null },
+                                        size = currentSizes.getOrNull(selectedSizeIndex),
                                     imageUrl = imagePath
                                 )
                                 try {
@@ -341,55 +337,10 @@ fun NewGarmentScreen(
                 val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                 val screenWidthDp = configuration.screenWidthDp.dp
 
-                val stylesLayer = rememberGraphicsLayer()
-                Box(
-                    modifier = Modifier
-                        .requiredWidth(screenWidthDp)
-                        .clipToBounds()
-                ) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .drawWithContent {
-                                stylesLayer.record {
-                                    this@drawWithContent.drawContent()
-                                }
-                            }
-                            .padding(vertical = 24.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(STYLES) { style ->
-                            val isSelected = style == selectedStyle
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(if (isSelected) Color.Black else Color.Transparent)
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) Color.Transparent else Color(0xFFBDBDBD),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .clickable { selectedStyle = style }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = style,
-                                    color = if (isSelected) Color.White else Color.Gray,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-                    }
-                    
-                    HorizontalEdgesProgressiveBlurLayer(
-                        modifier = Modifier.matchParentSize(),
-                        contentLayer = stylesLayer,
-                        maxBlur = 20f,
-                        edgeWidthFraction = 24f / configuration.screenWidthDp.toFloat()
-                    )
-                }
+                com.pdm0126.outfix.ui.StyleSlider(
+                    selectedStyle = selectedStyle,
+                    onStyleSelected = { selectedStyle = it }
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -488,8 +439,10 @@ fun NewGarmentScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                if (selectedCategory !in listOf("Zapatillas", "Botas", "Zapatos", "Bolso", "Mochila", "Gorra", "Sombrero", "Gorro", "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Otro")) {
+                if (selectedCategory !in listOf("Bolso", "Mochila", "Gorra", "Sombrero", "Gorro", "Gafas", "Reloj", "Cinturón", "Corbata", "Bufanda", "Joyería", "Otro")) {
+                    val currentSizes = if (selectedCategory in com.pdm0126.outfix.data.SHOE_CATEGORIES) com.pdm0126.outfix.data.SHOE_SIZES else GARMENT_SIZES
                     CustomSizeSlider(
+                        sizes = currentSizes,
                         selectedIndex = selectedSizeIndex,
                         onIndexChanged = { selectedSizeIndex = it }
                     )
@@ -518,194 +471,3 @@ fun NewGarmentScreen(
     }
 }
 
-@Composable
-fun CustomSizeSlider(
-    selectedIndex: Int,
-    onIndexChanged: (Int) -> Unit
-) {
-    val sizes = SIZES
-    val haptic = LocalHapticFeedback.current
-    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
-
-    var isDragging by remember { mutableStateOf(false) }
-    var dragX by remember { mutableStateOf(0f) }
-    
-    val trackLayer = rememberGraphicsLayer()
-    val density = LocalDensity.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .padding(top = 24.dp)
-            .padding(bottom = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth(0.75f).height(60.dp)) {
-            val widthPx = constraints.maxWidth.toFloat()
-            val segmentPx = if (sizes.size > 1) widthPx / (sizes.size - 1) else 0f
-            
-            val targetX = if (isDragging) dragX else (segmentPx * selectedIndex)
-            
-            val animatedX by animateFloatAsState(
-                targetValue = targetX,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "sliderHandle"
-            )
-
-            val textToDisplay = if (segmentPx > 0) {
-                val idx = (animatedX / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
-                sizes[idx]
-            } else sizes[selectedIndex]
-            
-            val thumbHalfWidthPx = with(density) { 24.dp.toPx() }
-            val thumbOffsetYPx = with(density) { 24.dp.toPx() }
-
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .drawWithContent {
-                        trackLayer.record {
-                            drawRect(Color(0xFFFAFAFA))
-                            this@drawWithContent.drawContent()
-                        }
-                        drawLayer(trackLayer)
-                    }
-            ) {
-                Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .align(Alignment.BottomCenter)
-                    .pointerInput(segmentPx) {
-                        var lastVibratedIndex = -1
-                        detectHorizontalDragGestures(
-                            onDragStart = { offset ->
-                                isDragging = true
-                                dragX = offset.x.coerceIn(0f, widthPx)
-                                lastVibratedIndex = (dragX / segmentPx).roundToInt()
-                            },
-                            onDragEnd = {
-                                isDragging = false
-                            },
-                            onDragCancel = {
-                                isDragging = false
-                            }
-                        ) { change, _ ->
-                            change.consume()
-                            dragX = change.position.x.coerceIn(0f, widthPx)
-                            
-                            for (i in sizes.indices) {
-                                val cx = i * segmentPx
-                                if (Math.abs(dragX - cx) < (segmentPx * 0.15f)) {
-                                    if (lastVibratedIndex != i) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        lastVibratedIndex = i
-                                    }
-                                    break
-                                }
-                            }
-
-                            val newIndex = (dragX / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
-                            if (newIndex != currentSelectedIndex) {
-                                onIndexChanged(newIndex)
-                            }
-                        }
-                    }
-                    .pointerInput(segmentPx) {
-                        detectTapGestures(
-                            onTap = { offset ->
-                                val newIndex = (offset.x / segmentPx).roundToInt().coerceIn(0, sizes.size - 1)
-                                if (newIndex != currentSelectedIndex) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onIndexChanged(newIndex)
-                                }
-                            }
-                        )
-                    }
-            ) {
-                val centerY = size.height / 2f
-                val activeColor = Color(0xFF007AFF)
-                val inactiveColor = Color(0xFFE0E0E0)
-                
-                drawLine(
-                    color = activeColor,
-                    start = Offset(0f, centerY),
-                    end = Offset(animatedX, centerY),
-                    strokeWidth = 4.dp.toPx()
-                )
-                
-                drawLine(
-                    color = inactiveColor,
-                    start = Offset(animatedX, centerY),
-                    end = Offset(widthPx, centerY),
-                    strokeWidth = 4.dp.toPx()
-                )
-                
-                for (i in sizes.indices) {
-                    val cx = i * segmentPx
-                    val isActive = cx <= animatedX + 1f
-                    
-                    drawCircle(
-                        color = if (isActive) activeColor else inactiveColor,
-                        radius = 5.dp.toPx(),
-                        center = Offset(cx, centerY)
-                    )
-                    drawCircle(
-                        color = Color.White,
-                        radius = 3.dp.toPx(),
-                        center = Offset(cx, centerY)
-                    )
-                }
-                
-            }
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset { 
-                        IntOffset(
-                            (animatedX - thumbHalfWidthPx).roundToInt(), 
-                            thumbOffsetYPx.roundToInt()
-                        ) 
-                    }
-                    .size(48.dp, 32.dp)
-                    .liquidGlass(
-                        blur = 0f,
-                        saturation = 1.2f,
-                        refraction = 0.4f,
-                        curve = 0.6f,
-                        dispersion = 0.25f,
-                        normalizedRadius = 0.5f
-                    )
-            ) {
-                if (Build.VERSION.SDK_INT >= 31) {
-                    Canvas(modifier = Modifier.matchParentSize()) {
-                        translate(left = -(animatedX - thumbHalfWidthPx), top = -thumbOffsetYPx) {
-                            drawLayer(trackLayer)
-                        }
-                        drawRect(Color.White.copy(alpha = 0.5f))
-                    }
-                } else {
-                    Box(modifier = Modifier.matchParentSize().background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(50)))
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(animatedX.roundToInt(), 0) }
-            ) {
-                Text(
-                    text = textToDisplay,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    modifier = Modifier.offset(x = (-10).dp)
-                )
-            }
-        }
-    }
-}

@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -50,6 +51,14 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.layout.boundsInRoot
+
+object ClosetOverlayState {
+    var detailGarment by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.api.dto.GarmentResponse?>(null)
+    var detailGarmentBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    var isOverlayActive by androidx.compose.runtime.mutableStateOf(false)
+}
 
 @Composable
 fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
@@ -98,6 +107,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
             }
 
         val rootLayer = rememberGraphicsLayer()
+        
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -146,8 +156,14 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                             selectedBottom = null
                         }
                     },
+                    onItemLongClick = { garment, bounds -> 
+                        ClosetOverlayState.detailGarment = garment
+                        ClosetOverlayState.detailGarmentBounds = bounds
+                        ClosetOverlayState.isOverlayActive = true
+                    },
                     onOpenDropdown = handleOpenDropdown
                 )
+
 
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !isDressSelected,
@@ -160,6 +176,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         selectedItem = selectedBottom,
                         isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "inferior",
                         onItemSelected = { selectedBottom = if (selectedBottom == it) null else it },
+                        onItemLongClick = { garment, bounds -> 
+                        ClosetOverlayState.detailGarment = garment
+                        ClosetOverlayState.detailGarmentBounds = bounds
+                        ClosetOverlayState.isOverlayActive = true
+                    },
                         onOpenDropdown = handleOpenDropdown
                     )
                 }
@@ -170,6 +191,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     selectedItem = selectedShoes,
                     isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "calzado",
                     onItemSelected = { selectedShoes = if (selectedShoes == it) null else it },
+                    onItemLongClick = { garment, bounds -> 
+                        ClosetOverlayState.detailGarment = garment
+                        ClosetOverlayState.detailGarmentBounds = bounds
+                        ClosetOverlayState.isOverlayActive = true
+                    },
                     onOpenDropdown = handleOpenDropdown
                 )
 
@@ -180,6 +206,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         selectedItem = selectedHead,
                         isDropdownExpanded = isDropdownExpanded && dropdownSelectedTitle == "cabeza",
                         onItemSelected = { selectedHead = if (selectedHead == it) null else it },
+                        onItemLongClick = { garment, bounds -> 
+                        ClosetOverlayState.detailGarment = garment
+                        ClosetOverlayState.detailGarmentBounds = bounds
+                        ClosetOverlayState.isOverlayActive = true
+                    },
                         onOpenDropdown = handleOpenDropdown
                     )
                 }
@@ -207,6 +238,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                 }
                                 selectedAccessories = filtered + clickedItem
                             }
+                        },
+                        onItemLongClick = { garment, bounds -> 
+                            ClosetOverlayState.detailGarment = garment
+                            ClosetOverlayState.detailGarmentBounds = bounds
+                            ClosetOverlayState.isOverlayActive = true
                         },
                         onOpenDropdown = handleOpenDropdown
                     )
@@ -931,6 +967,7 @@ fun CategorySlider(
     selectedItems: List<GarmentResponse> = emptyList(),
     isDropdownExpanded: Boolean = false,
     onItemSelected: (GarmentResponse) -> Unit,
+    onItemLongClick: ((GarmentResponse, androidx.compose.ui.geometry.Rect) -> Unit)? = null,
     onOpenDropdown: (String, androidx.compose.ui.layout.LayoutCoordinates, List<String>, String, (String) -> Unit) -> Unit
 ) {
     if (items.isEmpty()) return
@@ -1006,7 +1043,8 @@ fun CategorySlider(
                 GarmentCard(
                     garment = garment,
                     isSelected = garment == selectedItem || selectedItems.contains(garment),
-                    onClick = { onItemSelected(garment) }
+                    onClick = { onItemSelected(garment) },
+                    onLongClick = if (onItemLongClick != null) { { bounds -> onItemLongClick(garment, bounds) } } else null
                 )
             }
         }
@@ -1014,20 +1052,34 @@ fun CategorySlider(
 }
 
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun GarmentCard(
     garment: GarmentResponse,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null
 ) {
     val borderColor = if (isSelected) Color.White else Color.Transparent
+    var bounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    
+    val isDetailActive = ClosetOverlayState.isOverlayActive && ClosetOverlayState.detailGarment?.id == garment.id
     
     Box(
         modifier = Modifier
             .size(90.dp)
+            .graphicsLayer { alpha = if (isDetailActive) 0f else 1f }
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFFF6EEE6))
-            .clickable { onClick() }
+            .onGloballyPositioned { coords ->
+                try {
+                    bounds = coords.boundsInRoot()
+                } catch (e: Exception) {}
+            }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { bounds?.let { onLongClick?.invoke(it) } }
+            )
             .then(
                 if (isSelected) Modifier.border(3.dp, borderColor, RoundedCornerShape(16.dp))
                 else Modifier

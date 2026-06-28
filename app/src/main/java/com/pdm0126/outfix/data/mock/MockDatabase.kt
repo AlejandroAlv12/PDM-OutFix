@@ -470,4 +470,17 @@ object MockDatabase {
         prendas.add(garment)
         updateTrigger.value++
     }
+    
+    fun updateGarment(garment: GarmentResponse) {
+        val index = prendas.indexOfFirst { it.id == garment.id }
+        if (index != -1) {
+            prendas[index] = garment
+            updateTrigger.value++
+        }
+    }
+    
+    fun deleteGarment(id: String) {
+        prendas.removeAll { it.id == id }
+        updateTrigger.value++
+    }
 }
