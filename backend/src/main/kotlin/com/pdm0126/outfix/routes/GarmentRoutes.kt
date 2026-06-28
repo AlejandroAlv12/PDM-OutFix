@@ -15,7 +15,7 @@ import java.util.UUID
 fun RoutingCall.userId(): UUID {
     val principal = principal<JWTPrincipal>()
     if (principal == null) {
-        // Dummy UUID for testing when auth is disabled
+        // Dummy UUID para pruebas sin autenticación
         return UUID.fromString("00000000-0000-0000-0000-000000000000")
     }
     return UUID.fromString(principal.payload.getClaim("userId").asString())

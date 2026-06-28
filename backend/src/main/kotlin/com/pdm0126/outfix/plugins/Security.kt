@@ -8,7 +8,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 
-// Configuración JWT — en producción usar variables de entorno
+// Configuración JWT
 object JwtConfig {
     const val SECRET = "outfix-jwt-secret-cambiar-en-produccion"
     const val ISSUER = "outfix-api"

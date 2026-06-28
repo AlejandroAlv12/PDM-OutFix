@@ -8,8 +8,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 
 // Índice central de rutas.
-// Cada compañero trabaja en su archivo de rutas (AuthRoutes.kt, etc.)
-// sin tocar este archivo. Solo se agrega la llamada aquí una vez.
 fun Application.configureRouting() {
     routing {
         // Rutas públicas (no necesitan JWT)

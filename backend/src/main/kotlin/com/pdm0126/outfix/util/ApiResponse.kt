@@ -2,8 +2,6 @@ package com.pdm0126.outfix.util
 
 import kotlinx.serialization.Serializable
 
-// Wrapper estandarizado para TODAS las respuestas de la API.
-// El frontend (Ktor Client) decodifica siempre esta misma estructura.
 @Serializable
 data class ApiResponse<T>(
     val success: Boolean,
