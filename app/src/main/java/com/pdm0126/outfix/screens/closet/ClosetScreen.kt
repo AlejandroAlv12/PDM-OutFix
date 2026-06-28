@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.boundsInRoot
@@ -313,7 +315,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (plannerDay != null) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = plannerDay != null,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, clip = false),
+                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, delayMillis = 200)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End, clip = false)
+                    ) {
                         var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isRandomPressedInstant by remember { mutableStateOf(false) }
                         val randomScale by androidx.compose.animation.core.animateFloatAsState(
@@ -405,16 +411,17 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     Box(
                         modifier = Modifier
                             .height(50.dp)
+                            .zIndex(1f)
+                            .graphicsLayer {
+                                scaleX = buttonScale
+                                scaleY = buttonScale
+                            }
                             .onGloballyPositioned { coords -> 
                                 if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                     try {
                                         buttonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
                                     } catch (e: Exception) {}
                                 }
-                            }
-                            .graphicsLayer {
-                                scaleX = buttonScale
-                                scaleY = buttonScale
                             }
                             .pointerInput(Unit) {
                                 awaitEachGesture {
@@ -490,7 +497,10 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         Box(modifier = Modifier.matchParentSize().background(LimeGreen.copy(alpha = 0.40f)))
                         
                         Row(
-                            modifier = Modifier.fillMaxHeight().padding(horizontal = 24.dp),
+                            modifier = Modifier
+                                .animateContentSize(animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = 400f))
+                                .fillMaxHeight()
+                                .padding(horizontal = 24.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -509,7 +519,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                         }
                     }
 
-                    if (plannerDay != null) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = plannerDay != null,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start, clip = false),
+                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, delayMillis = 200)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start, clip = false)
+                    ) {
                         var cancelButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isCancelPressedInstant by remember { mutableStateOf(false) }
                         val cancelScale by androidx.compose.animation.core.animateFloatAsState(
@@ -554,7 +568,6 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                     selectedHead = null
                                     selectedAccessories = emptyList()
                                     ClosetOverlayState.plannerEditDay = null
-                                    com.pdm0126.outfix.ui.GlobalNavigationState.requestedTab = com.pdm0126.outfix.ui.OutFixScreen.WeeklyPlanner
                                 }
                                 .clip(androidx.compose.foundation.shape.CircleShape),
                             contentAlignment = Alignment.Center
