@@ -257,7 +257,7 @@ fun LiquidWheelPickerOverlay(
             .pointerInput(Unit) {
                 var hitTopLimit = false
                 var hitBottomLimit = false
-                detectVerticalDragGestures(
+                androidx.compose.foundation.gestures.detectDragGestures(
                     onDragEnd = {
                         val index = (-dragYOffsetPx / buttonHeightPx).roundToInt().coerceIn(0, sortedItems.size - 1)
                         dragYOffsetPx = -index * buttonHeightPx
@@ -271,7 +271,7 @@ fun LiquidWheelPickerOverlay(
                     val maxScroll = 0f
                     val minScroll = -((sortedItems.size - 1) * buttonHeightPx)
                     
-                    val newDrag = dragYOffsetPx + dragAmount
+                    val newDrag = dragYOffsetPx + dragAmount.y
                     
                     if (newDrag > maxScroll) {
                         if (!hitTopLimit) {
