@@ -21,13 +21,12 @@ fun main() {
 }
 
 fun Application.module() {
-    // Conectar a PostgreSQL y crear tablas
     DatabaseFactory.init()
 
     // Plugins de Ktor
     install(CallLogging)
     install(CORS) {
-        anyHost() // Para desarrollo — el emulador Android necesita esto
+        anyHost()
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
         allowMethod(HttpMethod.Put)

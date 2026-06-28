@@ -12,7 +12,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 
 // Tarea recurrente que marca las prendas del outfit de hoy como "DIRTY"
-// al finalizar el día. Usa coroutines estándar de Kotlin, sin librerías extra.
 object LaundryScheduler {
     private val logger = LoggerFactory.getLogger("LaundryScheduler")
 

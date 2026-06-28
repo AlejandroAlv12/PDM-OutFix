@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.pdm0126.outfix.data.api.RetrofitClient
 import com.pdm0126.outfix.data.prefs.SessionManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +34,8 @@ class MainActivity : ComponentActivity() {
         
         val sessionManager = SessionManager(this)
         RetrofitClient.sessionManager = sessionManager
+
+
 
         setContent {
             OutFixTheme(darkTheme = true) {

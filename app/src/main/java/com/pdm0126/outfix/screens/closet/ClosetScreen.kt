@@ -131,11 +131,11 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
 
         val rootLayer = rememberGraphicsLayer()
         
-        val tops = remember(garments) { garments.filter { it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
-        val bottoms = remember(garments) { garments.filter { it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
-        val shoes = remember(garments) { garments.filter { it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
-        val headwear = remember(garments) { garments.filter { it.category in listOf("Gorra", "Sombrero", "Gorro") } }
-        val accessories = remember(garments) { garments.filter { it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
+        val tops = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
+        val bottoms = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
+        val shoes = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
+        val headwear = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
+        val accessories = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
         
         Box(
             modifier = Modifier

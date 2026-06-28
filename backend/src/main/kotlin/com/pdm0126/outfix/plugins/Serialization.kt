@@ -10,7 +10,7 @@ fun Application.configureSerialization() {
         json(Json {
             prettyPrint = true        // JSON legible en desarrollo
             isLenient = false
-            ignoreUnknownKeys = true  // No truena si el cliente manda campos extra
+            ignoreUnknownKeys = true  // No falla si el cliente manda campos extra
         })
     }
 }
