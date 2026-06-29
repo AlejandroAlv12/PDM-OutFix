@@ -61,6 +61,28 @@ fun HomeScreen() {
         val todayInfo = plannerDays.find { it.calendarDay == currentDayOfWeek }
         
         val lentGarments = remember(garments) { garments.filter { it.status == "LENT" } }
+        
+        val streak = remember(plannerDays, currentDayOfWeek) {
+            var count = 0
+            var checkDay = currentDayOfWeek
+            var isFirstCheck = true
+            
+            for (i in 0 until 7) {
+                val dayInfo = plannerDays.find { it.calendarDay == checkDay }
+                val hasOutfit = dayInfo != null && (dayInfo.topGarment != null || dayInfo.bottomGarment != null || dayInfo.shoesGarment != null || dayInfo.hatGarment != null)
+                
+                if (hasOutfit) {
+                    count++
+                } else if (isFirstCheck) {
+                } else {
+                    break
+                }
+                
+                isFirstCheck = false
+                checkDay = if (checkDay == java.util.Calendar.SUNDAY) java.util.Calendar.SATURDAY else checkDay - 1
+            }
+            count
+        }
     
         Column(
             modifier = Modifier
@@ -186,7 +208,7 @@ fun HomeScreen() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Streak",
+                                text = "Racha",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
                                 color = Color.Black,
@@ -195,13 +217,13 @@ fun HomeScreen() {
                             Spacer(modifier = Modifier.height(8.dp))
                             Icon(
                                 imageVector = Icons.Rounded.LocalFireDepartment,
-                                contentDescription = "Streak",
+                                contentDescription = "Racha",
                                 tint = Color(0xFFFF7043),
                                 modifier = Modifier.size(50.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "3",
+                                text = streak.toString(),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 24.sp,
                                 color = Color.Black
