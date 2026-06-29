@@ -466,6 +466,7 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                         modifier = Modifier.align(Alignment.Center)
                     )
 

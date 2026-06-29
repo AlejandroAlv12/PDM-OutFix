@@ -43,6 +43,7 @@ import coil.compose.AsyncImage
 import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.ui.CharacterWithClothes
+import com.pdm0126.outfix.screens.closet.parseColorHex
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -309,48 +310,49 @@ fun HomeScreen() {
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = day.day.lowercase(),
+                                    text = day.day.uppercase(),
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 12.sp,
-                                    color = Color.Black
+                                    color = Color.Black,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 
-                                val headColor = day.hatColor ?: Color.White
+                                val defaultSkin = Color(0xFFEAC3AB)
+                                val headColor = day.hatGarment?.colorHex?.let { parseColorHex(it) } ?: day.hatColor?.takeIf { it != Color.Transparent } ?: defaultSkin
                                 Box(
                                     modifier = Modifier
                                         .size(24.dp)
                                         .clip(CircleShape)
                                         .background(headColor)
-                                        .border(1.dp, Color.Black, CircleShape)
+                                        .border(0.dp, Color.Black, CircleShape)
                                 )
                                 
                                 Spacer(modifier = Modifier.height(8.dp))
                                 
-                                Canvas(modifier = Modifier.size(width = 24.dp, height = 48.dp)) {
-                                    val radius = size.width / 2
-                                    val h = size.height
-                                    val w = size.width
-                                    
-                                    drawRoundRect(
-                                        color = day.topColor,
-                                        topLeft = Offset(0f, 0f),
-                                        size = Size(w, h / 2),
-                                        cornerRadius = CornerRadius(radius, radius)
-                                    )
-                                    drawRoundRect(
-                                        color = day.bottomColor,
-                                        topLeft = Offset(0f, h / 2),
-                                        size = Size(w, h / 2),
-                                        cornerRadius = CornerRadius(radius, radius)
-                                    )
-                                    drawRoundRect(
-                                        color = Color.Black,
-                                        topLeft = Offset(0f, 0f),
-                                        size = Size(w, h),
-                                        cornerRadius = CornerRadius(radius, radius),
-                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
-                                    )
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 24.dp, height = 48.dp)
+                                        .clip(RoundedCornerShape(percent = 50))
+                                        .border(0.dp, Color.Black, RoundedCornerShape(percent = 50))
+                                ) {
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        val topC = day.topGarment?.colorHex?.let { parseColorHex(it) } ?: if (day.topColor != Color.Transparent) day.topColor else defaultSkin
+                                        val bottomC = day.bottomGarment?.colorHex?.let { parseColorHex(it) } ?: if (day.bottomColor != Color.Transparent) day.bottomColor else defaultSkin
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                                .background(topC)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                                .background(bottomC)
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -18,13 +18,13 @@ class PlannerRepository(
     private val garmentDao: GarmentDao
 ) {
     private val defaultDays = listOf(
-        DayInfo("LUN", Calendar.MONDAY, Color.White, Color(0xFF90D5E1), Color(0xFF277636), Color(0xFF90D5E1)),
-        DayInfo("MAR", Calendar.TUESDAY, Color(0xFF67B0E8), Color.Black, Color.Black, null),
-        DayInfo("MIE", Calendar.WEDNESDAY, Color(0xFFFF85E2), Color.White, Color.Black, null),
-        DayInfo("JUE", Calendar.THURSDAY, Color(0xFFFF1010), Color.White, Color.White, Color(0xFFFF1010)),
-        DayInfo("VIE", Calendar.FRIDAY, Color(0xFFE4A9B0), Color(0xFF94C4E1), Color(0xFFE4A9B0), null),
-        DayInfo("SAB", Calendar.SATURDAY, Color(0xFF4C8CA8), Color(0xFF033348), Color.Black, Color(0xFF4C8CA8)),
-        DayInfo("DOM", Calendar.SUNDAY, Color(0xFF8F8F8F), Color.Black, Color.Black, Color.Black)
+        DayInfo("LUN", Calendar.MONDAY, Color.Transparent, Color.Transparent, Color.Transparent, Color.Transparent),
+        DayInfo("MAR", Calendar.TUESDAY, Color.Transparent, Color.Transparent, Color.Transparent, null),
+        DayInfo("MIE", Calendar.WEDNESDAY, Color.Transparent, Color.Transparent, Color.Transparent, null),
+        DayInfo("JUE", Calendar.THURSDAY, Color.Transparent, Color.Transparent, Color.Transparent, Color.Transparent),
+        DayInfo("VIE", Calendar.FRIDAY, Color.Transparent, Color.Transparent, Color.Transparent, null),
+        DayInfo("SAB", Calendar.SATURDAY, Color.Transparent, Color.Transparent, Color.Transparent, Color.Transparent),
+        DayInfo("DOM", Calendar.SUNDAY, Color.Transparent, Color.Transparent, Color.Transparent, Color.Transparent)
     )
 
     val plannerDaysFlow: Flow<List<DayInfo>> = combine(

@@ -190,7 +190,8 @@ fun NewGarmentScreen(
                     text = "Nueva prenda",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = Color.Black,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
                 )
 
                 Box(
