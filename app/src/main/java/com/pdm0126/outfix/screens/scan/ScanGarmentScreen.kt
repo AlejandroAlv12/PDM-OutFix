@@ -428,8 +428,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             val blurRadius by animateDpAsState(
-                targetValue = if (isProcessing) 16.dp else 0.dp,
-                animationSpec = tween(300),
+                targetValue = if (isProcessing) 40.dp else 0.dp,
+                animationSpec = tween(800),
                 label = "blurRadius"
             )
             Column(

@@ -117,7 +117,7 @@ fun NewGarmentScreen(
     var estiloEj by remember { mutableStateOf("") }
     var marcaEj by remember { mutableStateOf("") }
     
-    var selectedSizeIndex by remember { mutableStateOf(2) }
+    var selectedSizeIndex by remember { mutableStateOf(3) }
     var manualTitleEdit by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedCategory, marcaEj) {
@@ -322,7 +322,8 @@ fun NewGarmentScreen(
 
                 com.pdm0126.outfix.ui.StyleSlider(
                     selectedStyle = selectedStyle,
-                    onStyleSelected = { selectedStyle = it }
+                    onStyleSelected = { selectedStyle = it },
+                    modifier = Modifier.requiredWidth(screenWidthDp)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
