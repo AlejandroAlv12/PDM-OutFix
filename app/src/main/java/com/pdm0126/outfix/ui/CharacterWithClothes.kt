@@ -180,14 +180,29 @@ fun CharacterWithClothes(
         }
         drawPath(path = upperPath, color = topColor)
         
+        val nameLower = top?.name?.lowercase() ?: ""
+        val notesLower = top?.notes?.lowercase() ?: ""
+        
+        val isExplicitShort = nameLower.contains("corta") || notesLower.contains("corta")
+        val isExplicitLong = nameLower.contains("larga") || notesLower.contains("larga")
+        val isExplicitSleeveless = nameLower.contains("sin manga") || nameLower.contains("tirante") || top?.category?.equals("Top", ignoreCase = true) == true
+        
         val isFormalTop = top?.style?.equals("Formal", ignoreCase = true) == true
         val isLongSleeveCategory = top?.category in listOf("Chaqueta", "Abrigo", "Suéter", "Camisa")
-        val isLongSleeve = isFormalTop || isLongSleeveCategory
         val isDressTop = top?.category?.equals("Vestido", ignoreCase = true) == true
         
-        val handHeight = if (isDressTop) armHeight else if (isLongSleeve) 16f * u else armHeight - 30f * u
+        val isLongSleeve = if (isExplicitShort || isExplicitSleeveless) false 
+                           else if (isExplicitLong) true 
+                           else (isFormalTop || isLongSleeveCategory)
+                           
+        val isSleeveless = isExplicitSleeveless || (isDressTop && !isExplicitLong)
+
+        val handHeight = if (isSleeveless) armHeight 
+                         else if (isLongSleeve) 16f * u 
+                         else armHeight - 30f * u
+                         
         val handTop = torsoTop + armHeight - handHeight
-        val topCorner = if (isDressTop) CornerRadius(shoulderRadius, shoulderRadius) else CornerRadius.Zero
+        val topCorner = if (isSleeveless) CornerRadius(shoulderRadius, shoulderRadius) else CornerRadius.Zero
         
         val leftHandPath = androidx.compose.ui.graphics.Path().apply {
             addRoundRect(

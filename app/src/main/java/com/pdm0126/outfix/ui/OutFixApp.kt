@@ -58,13 +58,47 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.scrollBy
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+
+val LaundryBasketIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "LaundryBasket",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            // Borde superior (rim)
+            moveTo(4f, 6f)
+            lineTo(20f, 6f)
+            
+            // Cuerpo del cesto
+            moveTo(5f, 6f)
+            lineTo(7f, 19f)
+            // Curva inferior izquierda
+            quadTo(7.2f, 21f, 9f, 21f)
+            lineTo(15f, 21f)
+            // Curva inferior derecha
+            quadTo(16.8f, 21f, 17f, 19f)
+            lineTo(19f, 6f)
+        }
+    }.build()
 
 @Serializable
 enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
     Home("Home", Icons.Outlined.Home),
     Closet("Closet", Icons.Outlined.Checkroom),
     WeeklyPlanner("Planner", Icons.Outlined.CalendarToday),
-    Laundry("Cesto", Icons.Outlined.LocalLaundryService),
+    Laundry("Cesto", LaundryBasketIcon),
     Profile("Profile", Icons.Outlined.Person)
 }
 
@@ -209,9 +243,9 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                         modifier = Modifier
                             .padding(start = 16.dp)
                             .size(48.dp)
+                            .bouncyClickable { HamburgerMenuState.isOpen = true }
                             .clip(CircleShape)
-                            .background(Color.Gray.copy(alpha = 0.5f))
-                            .bouncyClickable { HamburgerMenuState.isOpen = true },
+                            .background(Color.Gray.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

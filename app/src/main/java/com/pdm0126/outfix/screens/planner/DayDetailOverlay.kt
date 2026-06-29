@@ -40,6 +40,7 @@ import com.pdm0126.outfix.screens.closet.ClosetOverlayState
 import com.pdm0126.outfix.ui.CharacterWithClothes
 import com.pdm0126.outfix.ui.GlobalNavigationState
 import com.pdm0126.outfix.ui.OutFixScreen
+import com.pdm0126.outfix.ui.bouncyClickable
 
 @Composable
 fun DayDetailOverlay(
@@ -326,22 +327,22 @@ fun DayDetailOverlay(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(top = 24.dp, end = 24.dp)
-                                    .size(44.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.08f))
+                                    .size(40.dp)
                                     .graphicsLayer { alpha = contentAlpha }
-                                    .clickable {
+                                    .bouncyClickable {
                                         onDismiss()
                                         ClosetOverlayState.plannerEditDay = activeDayInfo.day
                                         ClosetOverlayState.hasLoadedPlannerDay = false
                                         GlobalNavigationState.requestedTab = OutFixScreen.Closet
-                                    },
+                                    }
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(Color(0xFFBDBDBD)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Edit,
                                     contentDescription = "Editar día",
-                                    tint = Color.Black,
+                                    tint = Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

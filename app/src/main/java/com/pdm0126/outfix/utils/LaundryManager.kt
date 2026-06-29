@@ -70,18 +70,19 @@ object LaundryManager {
                 
                 if (dayEntity != null) {
                     val garmentsToWash = mutableListOf<GarmentResponse>()
-                    dayEntity.topGarmentId?.let { id -> allGarments[id]?.toDto()?.let { garmentsToWash.add(it) } }
-                    dayEntity.bottomGarmentId?.let { id -> allGarments[id]?.toDto()?.let { garmentsToWash.add(it) } }
-                    dayEntity.shoesGarmentId?.let { id -> allGarments[id]?.toDto()?.let { garmentsToWash.add(it) } }
-                    dayEntity.hatGarmentId?.let { id -> allGarments[id]?.toDto()?.let { garmentsToWash.add(it) } }
-                    dayEntity.accessoryIds.split(",").filter { it.isNotBlank() }.forEach { id -> 
-                        allGarments[id]?.toDto()?.let { garmentsToWash.add(it) }
+                    val usedDateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(evalCal.time)
+                    
+                    dayEntity.topGarmentId?.let { id -> 
+                        allGarments[id]?.toDto()?.let { garmentsToWash.add(it.copy(notes = "USED:$usedDateStr")) } 
+                    }
+                    dayEntity.bottomGarmentId?.let { id -> 
+                        allGarments[id]?.toDto()?.let { garmentsToWash.add(it.copy(notes = "USED:$usedDateStr")) } 
                     }
                     
                     if (garmentsToWash.isNotEmpty()) {
                         garmentRepo.sendToLaundry(garmentsToWash)
-                        repository.clearDayOutfit(dayKey)
                     }
+                    repository.clearDayOutfit(dayKey)
                 }
             }
             
