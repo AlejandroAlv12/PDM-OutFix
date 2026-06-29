@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.OutFix" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.OutFix" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Fondo base para cuando inicia la app -->
+        <item name="android:windowBackground">@color/splash_doors_brown</item>
+    </style>
 </resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.OutFix" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Configuraciones para el Splash Screen de Android 12+ -->
+        <item name="android:windowSplashScreenBackground">@color/splash_doors_brown</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mi_logo_splash</item>
+        <item name="android:windowBackground">@color/splash_doors_brown</item>
+    </style>
+</resources>

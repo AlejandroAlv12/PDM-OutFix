@@ -196,8 +196,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                         Text(
                             text = "OutFix",
                             fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                            fontFamily = com.pdm0126.outfix.ui.theme.IdiqlatFontFamily,
                             color = Color.Black,
                             modifier = Modifier.padding(end = 48.dp)
                         )
