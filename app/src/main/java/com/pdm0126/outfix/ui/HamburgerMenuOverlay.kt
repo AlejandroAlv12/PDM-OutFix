@@ -2,7 +2,6 @@ package com.pdm0126.outfix.ui
 
 import android.content.Context
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -43,27 +43,24 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ─── Menu navigation states ──────────────────────────────────────────────────
 private enum class MenuState {
-    MENU,       // Small panel — menu items
-    LENT_LIST,  // Expanded — borrowed items list
-    ADD_LENT,   // Add new loan
-    LENT_DETAIL // Detail of a loan
+    MENU,       
+    LENT_LIST,  
+    ADD_LENT,   
+    LENT_DETAIL 
 }
 
-// ─── Global hamburger state ──────────────────────────────────────────────────
 object HamburgerMenuState {
     var isOpen by androidx.compose.runtime.mutableStateOf(false)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HamburgerMenuOverlay(
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null
 ) {
     val isOpen = HamburgerMenuState.isOpen
-    if (!isOpen) return
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -75,42 +72,51 @@ fun HamburgerMenuOverlay(
     var menuState by remember { mutableStateOf(MenuState.MENU) }
     var selectedLentItem by remember { mutableStateOf<LentItem?>(null) }
 
-    // Blur background
-    val bgAlpha by animateFloatAsState(
-        targetValue = if (isOpen) 0.45f else 0f,
-        animationSpec = tween(400),
-        label = "hamburgerBgAlpha"
-    )
+    val transitionState = remember { MutableTransitionState(false) }
+    transitionState.targetState = isOpen
+    val transition = updateTransition(transitionState, label = "HamburgerMenuTransition")
+    val containerOffsetX by transition.animateFloat(
+        transitionSpec = { tween(600, easing = FastOutSlowInEasing) },
+        label = "containerOffset"
+    ) { if (it) 0f else -1000f }
 
-    // Panel slide and size
+    val titleOffsetY by transition.animateFloat(
+        transitionSpec = { tween(600, delayMillis = if (targetState) 50 else 0, easing = FastOutSlowInEasing) },
+        label = "titleOffset"
+    ) { if (it) 0f else -1000f }
+
+    val item1OffsetY by transition.animateFloat(
+        transitionSpec = { tween(600, delayMillis = if (targetState) 25 else 25, easing = FastOutSlowInEasing) },
+        label = "item1Offset"
+    ) { if (it) 0f else -1000f }
+    val item2OffsetY by transition.animateFloat(
+        transitionSpec = { tween(600, delayMillis = if (targetState) 0 else 50, easing = FastOutSlowInEasing) },
+        label = "item2Offset"
+    ) { if (it) 0f else -1000f }
+
+    if (!transitionState.currentState && !transitionState.targetState) return
     val isExpanded = menuState != MenuState.MENU
     val panelWidthFraction by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0.72f,
+        targetValue = if (isExpanded) 0.92f else 0.88f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "panelWidth"
     )
     val panelHeightFraction by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0.45f,
+        targetValue = if (isExpanded) 0.88f else 0.56f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "panelHeight"
     )
-
-    // Slide-in from left
-    val slideIn = slideInHorizontally(
-        initialOffsetX = { -it },
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
-    ) + fadeIn(animationSpec = tween(200))
-    val slideOut = slideOutHorizontally(
-        targetOffsetX = { -it },
-        animationSpec = tween(300, easing = FastOutLinearInEasing)
-    ) + fadeOut(animationSpec = tween(200))
 
     LaunchedEffect(Unit) {
         lentRepository.refresh()
     }
 
+    val bgAlpha by transition.animateFloat(
+        transitionSpec = { tween(800, easing = FastOutSlowInEasing) },
+        label = "hamburgerBgAlpha"
+    ) { if (it) 0.4f else 0f }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // Dim overlay — dismiss on click
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -121,6 +127,7 @@ fun HamburgerMenuOverlay(
                     onClick = {
                         if (menuState == MenuState.MENU) {
                             HamburgerMenuState.isOpen = false
+                            menuState = MenuState.MENU
                         } else {
                             menuState = MenuState.MENU
                         }
@@ -128,108 +135,96 @@ fun HamburgerMenuOverlay(
                 )
         )
 
-        // Panel
-        AnimatedVisibility(
-            visible = isOpen,
-            enter = slideIn,
-            exit = slideOut,
-            modifier = Modifier.align(Alignment.CenterStart)
-        ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val panelWidth = maxWidth * panelWidthFraction
-                val panelHeight = maxHeight * panelHeightFraction
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val panelWidth  = maxWidth  * panelWidthFraction
+            val panelHeight = maxHeight * panelHeightFraction
+            val cornerRadius by animateFloatAsState(
+                targetValue = if (isExpanded) 20f else 24f,
+                animationSpec = tween(400),
+                label = "cornerRadius"
+            )
 
-                Box(
-                    modifier = Modifier
-                        .width(panelWidth)
-                        .height(panelHeight)
-                        .align(Alignment.CenterStart)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 0.dp,
-                                bottomStart = 0.dp,
-                                topEnd = if (isExpanded) 0.dp else 24.dp,
-                                bottomEnd = if (isExpanded) 0.dp else 24.dp
-                            )
-                        )
-                        .background(Color.White)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                ) {
-                    AnimatedContent(
-                        targetState = menuState,
-                        transitionSpec = {
-                            when {
-                                targetState.ordinal > initialState.ordinal ->
-                                    (slideInHorizontally { it } + fadeIn()).togetherWith(slideOutHorizontally { -it } + fadeOut())
-                                else ->
-                                    (slideInHorizontally { -it } + fadeIn()).togetherWith(slideOutHorizontally { it } + fadeOut())
-                            }
-                        },
-                        label = "menuStateTransition"
-                    ) { state ->
-                        when (state) {
-                            MenuState.MENU -> MenuPanel(
-                                onPrestadosClick = { menuState = MenuState.LENT_LIST },
-                                onClose = { HamburgerMenuState.isOpen = false }
-                            )
-                            MenuState.LENT_LIST -> LentListPanel(
-                                lentItems = lentItems,
-                                onBack = {
-                                    menuState = MenuState.MENU
-                                },
-                                onAddClick = { menuState = MenuState.ADD_LENT },
-                                onItemClick = { item ->
-                                    selectedLentItem = item
-                                    menuState = MenuState.LENT_DETAIL
-                                }
-                            )
-                            MenuState.ADD_LENT -> AddLentPanel(
-                                allGarments = allGarments,
-                                onBack = { menuState = MenuState.LENT_LIST },
-                                onSave = { garmentId, garmentImageUrl, garmentName, borrowerName, lentDate, reclaimDate, reclaimDateMillis ->
-                                    coroutineScope.launch {
-                                        val newItem = lentRepository.createLentItem(
-                                            garmentId = garmentId,
-                                            garmentImageUrl = garmentImageUrl,
-                                            garmentName = garmentName,
-                                            borrowerName = borrowerName,
-                                            lentDate = lentDate,
-                                            reclaimDate = reclaimDate,
-                                            reclaimDateMillis = reclaimDateMillis
-                                        )
-                                        // Mark garment as LENT
-                                        val garment = allGarments.find { it.id == garmentId }
-                                        if (garment != null) {
-                                            garmentRepository.updateGarment(garment.copy(status = "LENT"))
-                                        }
-                                        // Schedule reclaim notification
-                                        scheduleReclaimNotification(context, newItem)
-                                        menuState = MenuState.LENT_LIST
-                                    }
-                                }
-                            )
-                            MenuState.LENT_DETAIL -> LentDetailPanel(
-                                lentItem = selectedLentItem,
-                                onBack = { menuState = MenuState.LENT_LIST },
-                                onReturned = { item ->
-                                    coroutineScope.launch {
-                                        lentRepository.markReturned(item.id)
-                                        // Restore garment to AVAILABLE
-                                        val garment = allGarments.find { it.id == item.garmentId }
-                                        if (garment != null) {
-                                            garmentRepository.updateGarment(garment.copy(status = "AVAILABLE"))
-                                        }
-                                        // Cancel pending notification
-                                        cancelReclaimNotification(context, item.id)
-                                        menuState = MenuState.LENT_LIST
-                                    }
-                                }
-                            )
+            Box(
+                modifier = Modifier
+                    .width(panelWidth)
+                    .height(panelHeight)
+                    .align(Alignment.Center)          
+                    .graphicsLayer { translationX = containerOffsetX }
+                    .clip(RoundedCornerShape(cornerRadius.dp)) 
+                    .background(Color.White)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+            ) {
+                AnimatedContent(
+                    targetState = menuState,
+                    transitionSpec = {
+                        when {
+                            targetState.ordinal > initialState.ordinal ->
+                                (slideInHorizontally { it } + fadeIn()).togetherWith(slideOutHorizontally { -it } + fadeOut())
+                            else ->
+                                (slideInHorizontally { -it } + fadeIn()).togetherWith(slideOutHorizontally { it } + fadeOut())
                         }
+                    },
+                    label = "menuStateTransition"
+                ) { state ->
+                    when (state) {
+                        MenuState.MENU -> MenuPanel(
+                            onPrestadosClick = { menuState = MenuState.LENT_LIST },
+                            onClose = { HamburgerMenuState.isOpen = false },
+                            titleOffsetY = titleOffsetY,
+                            item1OffsetY = item1OffsetY,
+                            item2OffsetY = item2OffsetY
+                        )
+                        MenuState.LENT_LIST -> LentListPanel(
+                            lentItems = lentItems,
+                            onBack = { menuState = MenuState.MENU },
+                            onAddClick = { menuState = MenuState.ADD_LENT },
+                            onItemClick = { item ->
+                                selectedLentItem = item
+                                menuState = MenuState.LENT_DETAIL
+                            }
+                        )
+                        MenuState.ADD_LENT -> AddLentPanel(
+                            allGarments = allGarments,
+                            onBack = { menuState = MenuState.LENT_LIST },
+                            onSave = { garmentId, garmentImageUrl, garmentName, borrowerName, lentDate, reclaimDate, reclaimDateMillis ->
+                                coroutineScope.launch {
+                                    val newItem = lentRepository.createLentItem(
+                                        garmentId = garmentId,
+                                        garmentImageUrl = garmentImageUrl,
+                                        garmentName = garmentName,
+                                        borrowerName = borrowerName,
+                                        lentDate = lentDate,
+                                        reclaimDate = reclaimDate,
+                                        reclaimDateMillis = reclaimDateMillis
+                                    )
+                                    val garment = allGarments.find { it.id == garmentId }
+                                    if (garment != null) {
+                                        garmentRepository.updateGarment(garment.copy(status = "LENT"))
+                                    }
+                                    scheduleReclaimNotification(context, newItem)
+                                    menuState = MenuState.LENT_LIST
+                                }
+                            }
+                        )
+                        MenuState.LENT_DETAIL -> LentDetailPanel(
+                            lentItem = selectedLentItem,
+                            onBack = { menuState = MenuState.LENT_LIST },
+                            onReturned = { item ->
+                                coroutineScope.launch {
+                                    lentRepository.markReturned(item.id)
+                                    val garment = allGarments.find { it.id == item.garmentId }
+                                    if (garment != null) {
+                                        garmentRepository.updateGarment(garment.copy(status = "AVAILABLE"))
+                                    }
+                                    cancelReclaimNotification(context, item.id)
+                                    menuState = MenuState.LENT_LIST
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -237,11 +232,13 @@ fun HamburgerMenuOverlay(
     }
 }
 
-// ─── Panel 1: Main menu ───────────────────────────────────────────────────────
 @Composable
 private fun MenuPanel(
     onPrestadosClick: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    titleOffsetY: Float = 0f,
+    item1OffsetY: Float = 0f,    
+    item2OffsetY: Float = 0f    
 ) {
     Column(
         modifier = Modifier
@@ -249,21 +246,38 @@ private fun MenuPanel(
             .padding(vertical = 32.dp, horizontal = 24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        // App title
         Text(
             text = "OutFix",
             fontSize = 28.sp,
             fontWeight = FontWeight.Black,
             color = Color.Black,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier
+                .graphicsLayer { translationY = titleOffsetY }
+                .padding(bottom = 32.dp)
         )
 
-        MenuOptionRow(label = "Prestados", onClick = onPrestadosClick)
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
-        MenuOptionRow(label = "Administrar", onClick = { /* TODO */ })
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
-        MenuOptionRow(label = "About US", onClick = { /* TODO */ })
+        Box(
+            modifier = Modifier
+                .graphicsLayer { translationY = item1OffsetY }
+        ) {
+            MenuOptionRow(label = "Prestados", onClick = onPrestadosClick)
+        }
+        HorizontalDivider(
+            color = Color.LightGray.copy(alpha = 0.4f),
+            modifier = Modifier.graphicsLayer { translationY = item1OffsetY }
+        )
+
+        Box(modifier = Modifier.graphicsLayer { translationY = item2OffsetY }) {
+            MenuOptionRow(label = "Administrar", onClick = { /* TODO */ })
+        }
+        HorizontalDivider(
+            color = Color.LightGray.copy(alpha = 0.4f),
+            modifier = Modifier.graphicsLayer { translationY = item2OffsetY }
+        )
+        Box(modifier = Modifier.graphicsLayer { translationY = item2OffsetY }) {
+            MenuOptionRow(label = "About US", onClick = { /* TODO */ })
+        }
     }
 }
 
@@ -285,7 +299,6 @@ private fun MenuOptionRow(label: String, onClick: () -> Unit) {
     }
 }
 
-// ─── Panel 2: Lent items list ─────────────────────────────────────────────────
 @Composable
 private fun LentListPanel(
     lentItems: List<LentItem>,
@@ -396,7 +409,6 @@ private fun LentItemCard(item: LentItem, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Garment image
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -421,7 +433,6 @@ private fun LentItemCard(item: LentItem, onClick: () -> Unit) {
                 }
             }
 
-            // Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.borrowerName,
@@ -432,7 +443,6 @@ private fun LentItemCard(item: LentItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // Reclaim badge
                 val badgeColor = if (item.isReturned) LimeGreen else Color(0xFFFFC107)
                 val badgeText = if (item.isReturned) "Reclamado ✓" else "Reclamar: ${item.reclaimDate}"
                 Box(
@@ -453,7 +463,6 @@ private fun LentItemCard(item: LentItem, onClick: () -> Unit) {
     }
 }
 
-// ─── Panel 3: Add lent item ───────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddLentPanel(
@@ -466,12 +475,11 @@ private fun AddLentPanel(
     var borrowerName by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    // Dates
     val today = remember { Calendar.getInstance() }
     val todayFormatted = remember {
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(today.time)
     }
-    var reclaimDateMillis by remember { mutableStateOf(today.timeInMillis + 7L * 24 * 60 * 60 * 1000) } // default: 1 week
+    var reclaimDateMillis by remember { mutableStateOf(today.timeInMillis + 7L * 24 * 60 * 60 * 1000) }
     val reclaimDateFormatted = remember(reclaimDateMillis) {
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(reclaimDateMillis))
     }
@@ -484,7 +492,6 @@ private fun AddLentPanel(
 
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = reclaimDateMillis)
 
-    // Filter garments available for lending (not already LENT)
     val availableForLending = remember(allGarments, searchQuery) {
         allGarments
             .filter { it.status == "AVAILABLE" || it.status == "clean" || it.status.isBlank() }
@@ -513,7 +520,6 @@ private fun AddLentPanel(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -545,7 +551,6 @@ private fun AddLentPanel(
                 modifier = Modifier.align(Alignment.Center)
             )
 
-            // Confirm button (checkmark)
             val canSave = selectedGarment != null && borrowerName.isNotBlank()
             Box(
                 modifier = Modifier
@@ -585,10 +590,8 @@ private fun AddLentPanel(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Garment selector
             Text("Seleccionar prenda", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
 
-            // Search field
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -603,7 +606,6 @@ private fun AddLentPanel(
                 )
             )
 
-            // Selected garment preview
             if (selectedGarment != null) {
                 Box(
                     modifier = Modifier
@@ -633,7 +635,6 @@ private fun AddLentPanel(
                 }
             }
 
-            // Garment list
             if (availableForLending.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -684,7 +685,6 @@ private fun AddLentPanel(
 
             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
 
-            // Borrower name field
             OutlinedTextField(
                 value = borrowerName,
                 onValueChange = { borrowerName = it },
@@ -699,7 +699,6 @@ private fun AddLentPanel(
                 )
             )
 
-            // Reclaim date
             OutlinedTextField(
                 value = reclaimDateFormatted,
                 onValueChange = {},
@@ -728,7 +727,6 @@ private fun AddLentPanel(
                 )
             )
 
-            // Today's date (read-only)
             OutlinedTextField(
                 value = todayFormatted,
                 onValueChange = {},
@@ -748,7 +746,6 @@ private fun AddLentPanel(
     }
 }
 
-// ─── Panel 4: Lent item detail ────────────────────────────────────────────────
 @Composable
 private fun LentDetailPanel(
     lentItem: LentItem?,
@@ -758,7 +755,6 @@ private fun LentDetailPanel(
     val item = lentItem ?: return
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -801,7 +797,6 @@ private fun LentDetailPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Garment image (large)
             Box(
                 modifier = Modifier
                     .size(160.dp)
@@ -826,7 +821,6 @@ private fun LentDetailPanel(
                 }
             }
 
-            // Info card
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -855,7 +849,6 @@ private fun LentDetailPanel(
                 }
             }
 
-            // Devuelto button
             if (!item.isReturned) {
                 Box(
                     modifier = Modifier
@@ -893,7 +886,6 @@ private fun LentDetailRow(label: String, value: String) {
     }
 }
 
-// ─── Local notification helper ────────────────────────────────────────────────
 fun scheduleReclaimNotification(context: Context, item: LentItem) {
     // Only schedule if in the future
     val delayMs = item.reclaimDateMillis - System.currentTimeMillis()
