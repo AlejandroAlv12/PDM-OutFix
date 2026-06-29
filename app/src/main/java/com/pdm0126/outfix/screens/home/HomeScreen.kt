@@ -61,7 +61,9 @@ fun HomeScreen() {
         val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
         val todayInfo = plannerDays.find { it.calendarDay == currentDayOfWeek }
         
-        val lentGarments = remember(garments) { garments.filter { it.status == "LENT" } }
+        val lentRepo = OutfixApplication.instance.lentRepository
+        val lentItems by lentRepo.lentItemsFlow.collectAsState(initial = emptyList())
+        val pendingLentItems = remember(lentItems) { lentItems.filter { !it.isReturned } }
         
         val streak = remember(plannerDays, currentDayOfWeek) {
             var count = 0
@@ -360,7 +362,7 @@ fun HomeScreen() {
                 }
             }
             
-            if (lentGarments.isNotEmpty()) {
+            if (pendingLentItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Box(
@@ -387,7 +389,7 @@ fun HomeScreen() {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(lentGarments) { garment ->
+                            items(pendingLentItems) { lentItem ->
                                 Box(
                                     modifier = Modifier
                                         .size(80.dp)
@@ -397,8 +399,8 @@ fun HomeScreen() {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     AsyncImage(
-                                        model = garment.imageUrl,
-                                        contentDescription = garment.name,
+                                        model = lentItem.garmentImageUrl,
+                                        contentDescription = lentItem.garmentName,
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier.fillMaxSize().padding(8.dp)
                                     )

@@ -8,7 +8,9 @@ import com.pdm0126.outfix.data.local.GarmentEntity
 import com.pdm0126.outfix.data.local.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -111,21 +113,23 @@ class GarmentRepository(
             garmentDao.insertGarment(garment.toEntity(isPendingSync = false))
         }
 
-        try {
-            val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
-                name = garment.name,
-                category = garment.category,
-                colorHex = garment.colorHex,
-                colorName = garment.colorName,
-                style = garment.style,
-                brand = garment.brand,
-                size = garment.size,
-                status = garment.status,
-                imageUrl = garment.imageUrl,
-                notes = garment.notes
-            )
-            RetrofitClient.garmentApi.updateGarment(garment.id, request)
-        } catch (e: Exception) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
+                    name = garment.name,
+                    category = garment.category,
+                    colorHex = garment.colorHex,
+                    colorName = garment.colorName,
+                    style = garment.style,
+                    brand = garment.brand,
+                    size = garment.size,
+                    status = garment.status,
+                    imageUrl = garment.imageUrl,
+                    notes = garment.notes
+                )
+                RetrofitClient.garmentApi.updateGarment(garment.id, request)
+            } catch (e: Exception) {
+            }
         }
     }
 

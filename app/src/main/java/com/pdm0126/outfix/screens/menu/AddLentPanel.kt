@@ -71,10 +71,16 @@ fun AddLentPanel(
         }.toSet()
     }
 
-    val availableForLending = remember(allGarments, searchQuery, plannerGarmentIds) {
+    val lentItems by OutfixApplication.instance.lentRepository.lentItemsFlow.collectAsState(initial = emptyList())
+    val activeLentGarmentIds = remember(lentItems) {
+        lentItems.filter { !it.isReturned }.map { it.garmentId }.toSet()
+    }
+
+    val availableForLending = remember(allGarments, searchQuery, plannerGarmentIds, activeLentGarmentIds) {
         allGarments
             .filter { it.status == "AVAILABLE" || it.status == "clean" || it.status.isBlank() }
             .filter { it.id !in plannerGarmentIds }
+            .filter { it.id !in activeLentGarmentIds }
             .filter { g ->
                 searchQuery.isBlank() ||
                 g.name.contains(searchQuery, ignoreCase = true) ||

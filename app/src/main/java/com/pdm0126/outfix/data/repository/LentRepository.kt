@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import com.pdm0126.outfix.data.api.RetrofitClient
 import com.pdm0126.outfix.data.api.dto.CreateLentItemRequest
 import com.pdm0126.outfix.data.local.LentItem
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,8 +98,8 @@ class LentRepository(private val context: Context) {
         val updated = loadLocal() + localItem
         saveLocal(updated)
 
-        // Try server
-        withContext(Dispatchers.IO) {
+        // Try server asynchronously so UI doesn't block
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val request = CreateLentItemRequest(
                     garmentId = garmentId,
