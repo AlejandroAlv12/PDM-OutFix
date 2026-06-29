@@ -35,6 +35,8 @@
             </intent-filter>
         </activity>
 
+        <receiver android:name=".utils.SunsetNotificationReceiver" android:exported="false" />
+
         <!-- WorkManager provider -->
         <provider
             android:name="androidx.startup.InitializationProvider"

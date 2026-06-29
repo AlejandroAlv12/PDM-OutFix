@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -34,8 +35,8 @@ import androidx.compose.ui.layout.boundsInRoot
 
 import java.util.Calendar
 
-import com.pdm0126.outfix.data.mock.DayInfo
-import com.pdm0126.outfix.data.mock.MockDatabase
+import com.pdm0126.outfix.data.model.DayInfo
+import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.ui.GlobalNavigationState
 import com.pdm0126.outfix.ui.OutFixScreen
 import com.pdm0126.outfix.screens.closet.ClosetOverlayState
@@ -56,16 +57,17 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.graphicsLayer
+
 @Composable
 fun WeeklyPlannerScreen() {
     val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
     
     var editingDay by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     
-    val trigger = MockDatabase.updateTrigger.value
-
-    val daysList = MockDatabase.plannerDays
-    val rotatedDays = remember(currentDayOfWeek, daysList.toList(), trigger) {
+    val daysList by OutfixApplication.instance.plannerRepository.plannerDaysFlow.collectAsState(initial = emptyList())
+    
+    val rotatedDays = remember(currentDayOfWeek, daysList) {
+        if (daysList.isEmpty()) return@remember emptyList()
         val todayIndex = daysList.indexOfFirst { it.calendarDay == currentDayOfWeek }.takeIf { it >= 0 } ?: 0
         daysList.drop(todayIndex) + daysList.take(todayIndex)
     }
@@ -162,20 +164,20 @@ fun WeeklyPlannerScreen() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            val d = rotatedDays.last()
-            DayCard(
-                day = d.day,
-                top = d.topGarment,
-                bottom = d.bottomGarment,
-                shoes = d.shoesGarment,
-                head = d.hatGarment,
-                accessories = d.accessories,
-                modifier = Modifier.width(115.dp),
-                isCurrentDay = d.calendarDay == currentDayOfWeek,
-                isEditing = editingDay == d.day,
-                onClick = { 
-                    editingDay = if (editingDay == d.day) null else d.day 
-                },
+            rotatedDays.lastOrNull()?.let { d ->
+                DayCard(
+                    day = d.day,
+                    top = d.topGarment,
+                    bottom = d.bottomGarment,
+                    shoes = d.shoesGarment,
+                    head = d.hatGarment,
+                    accessories = d.accessories,
+                    modifier = Modifier.width(115.dp),
+                    isCurrentDay = d.calendarDay == currentDayOfWeek,
+                    isEditing = editingDay == d.day,
+                    onClick = { 
+                        editingDay = if (editingDay == d.day) null else d.day 
+                    },
                 onEditClick = {
                     ClosetOverlayState.plannerEditDay = d.day
                     ClosetOverlayState.hasLoadedPlannerDay = false
@@ -189,6 +191,7 @@ fun WeeklyPlannerScreen() {
                     editingDay = null
                 }
             )
+            }
         }
         
         Spacer(modifier = Modifier.height(120.dp))
@@ -217,9 +220,13 @@ fun DayCard(
 
     var cardBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
+    val isDetailActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive &&
+                         com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailDayInfo?.day == day
+
     Box(
         modifier = modifier
             .aspectRatio(0.48f)
+            .graphicsLayer { alpha = if (isDetailActive) 0f else 1f }
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },

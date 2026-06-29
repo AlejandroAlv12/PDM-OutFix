@@ -139,6 +139,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     )
     val isOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive
     val isDayOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive
+    val isHomeOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isHomeOverlayActive
 
     val isHamburgerOpen = HamburgerMenuState.isOpen
 
@@ -147,6 +148,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         showLogoutDialog -> 2f
         isOverlayActive -> 20f
         isDayOverlayActive -> 20f
+        isHomeOverlayActive -> 20f
         isHamburgerOpen -> 20f
         else -> 0f
     }
@@ -161,7 +163,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "BgBlur"
     )
 
-    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive || isHamburgerOpen
+    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive || isHomeOverlayActive || isHamburgerOpen
 
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
@@ -534,6 +536,15 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             appBackgroundLayer = globalAppLayer,
             onDismiss = {
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive = false
+            }
+        )
+
+        com.pdm0126.outfix.screens.home.HomeDetailOverlay(
+            dayInfo = com.pdm0126.outfix.screens.closet.ClosetOverlayState.homeDayInfo,
+            sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.homeOverlayBounds,
+            appBackgroundLayer = globalAppLayer,
+            onDismiss = {
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isHomeOverlayActive = false
             }
         )
 

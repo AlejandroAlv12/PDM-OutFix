@@ -4,16 +4,51 @@ import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.data.local.GarmentDao
 import com.pdm0126.outfix.data.local.PlannerDayDao
 import com.pdm0126.outfix.data.local.PlannerDayEntity
-import com.pdm0126.outfix.data.mock.DayInfo
-import com.pdm0126.outfix.data.mock.MockDatabase
+import com.pdm0126.outfix.data.model.DayInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import androidx.compose.ui.graphics.Color
+import java.util.Calendar
 
 class PlannerRepository(
     private val plannerDayDao: PlannerDayDao,
     private val garmentDao: GarmentDao
 ) {
+    private val defaultDays = listOf(
+        DayInfo("LUN", Calendar.MONDAY, Color.White, Color(0xFF90D5E1), Color(0xFF277636), Color(0xFF90D5E1)),
+        DayInfo("MAR", Calendar.TUESDAY, Color(0xFF67B0E8), Color.Black, Color.Black, null),
+        DayInfo("MIE", Calendar.WEDNESDAY, Color(0xFFFF85E2), Color.White, Color.Black, null),
+        DayInfo("JUE", Calendar.THURSDAY, Color(0xFFFF1010), Color.White, Color.White, Color(0xFFFF1010)),
+        DayInfo("VIE", Calendar.FRIDAY, Color(0xFFE4A9B0), Color(0xFF94C4E1), Color(0xFFE4A9B0), null),
+        DayInfo("SAB", Calendar.SATURDAY, Color(0xFF4C8CA8), Color(0xFF033348), Color.Black, Color(0xFF4C8CA8)),
+        DayInfo("DOM", Calendar.SUNDAY, Color(0xFF8F8F8F), Color.Black, Color.Black, Color.Black)
+    )
 
+    val plannerDaysFlow: Flow<List<DayInfo>> = combine(
+        plannerDayDao.getAllFlow(),
+        garmentDao.getAllGarmentsFlow()
+    ) { dayEntities, garmentEntities ->
+        val garmentsMap = garmentEntities.associate { it.id to it.toDto() }
+        val daysMap = dayEntities.associateBy { it.dayKey }
+
+        defaultDays.map { defaultDay ->
+            val entity = daysMap[defaultDay.day]
+            if (entity != null) {
+                defaultDay.copy(
+                    topGarment = entity.topGarmentId?.let { garmentsMap[it] },
+                    bottomGarment = entity.bottomGarmentId?.let { garmentsMap[it] },
+                    shoesGarment = entity.shoesGarmentId?.let { garmentsMap[it] },
+                    hatGarment = entity.hatGarmentId?.let { garmentsMap[it] },
+                    accessories = entity.accessoryIds.split(",").filter { it.isNotBlank() }.mapNotNull { garmentsMap[it] }
+                )
+            } else {
+                defaultDay
+            }
+        }
+    }
 
     suspend fun saveDayOutfit(
         dayKey: String,
@@ -34,39 +69,9 @@ class PlannerRepository(
         withContext(Dispatchers.IO) {
             plannerDayDao.upsertDay(entity)
         }
-
-        MockDatabase.plannerDays.find { it.day == dayKey }?.let { dayInfo ->
-            dayInfo.topGarment = top
-            dayInfo.bottomGarment = bottom
-            dayInfo.shoesGarment = shoes
-            dayInfo.hatGarment = head
-            dayInfo.accessories = accessories.toList()
-        }
     }
 
-
     suspend fun restorePlannerDays() {
-        val entities = withContext(Dispatchers.IO) { plannerDayDao.getAll() }
-        if (entities.isEmpty()) return
-
-        val allGarments = withContext(Dispatchers.IO) {
-            garmentDao.getAllGarments().associate { it.id to it.toDto() }
-        }
-
-        withContext(Dispatchers.Main) {
-            entities.forEach { entity ->
-                MockDatabase.plannerDays.find { it.day == entity.dayKey }?.let { dayInfo ->
-                    dayInfo.topGarment = entity.topGarmentId?.let { allGarments[it] }
-                    dayInfo.bottomGarment = entity.bottomGarmentId?.let { allGarments[it] }
-                    dayInfo.shoesGarment = entity.shoesGarmentId?.let { allGarments[it] }
-                    dayInfo.hatGarment = entity.hatGarmentId?.let { allGarments[it] }
-                    dayInfo.accessories = entity.accessoryIds
-                        .split(",")
-                        .filter { it.isNotBlank() }
-                        .mapNotNull { allGarments[it] }
-                }
-            }
-        }
     }
 
     suspend fun clearDayOutfit(dayKey: String) {
@@ -80,13 +85,6 @@ class PlannerRepository(
         )
         withContext(Dispatchers.IO) {
             plannerDayDao.upsertDay(entity)
-        }
-        MockDatabase.plannerDays.find { it.day == dayKey }?.let { dayInfo ->
-            dayInfo.topGarment = null
-            dayInfo.bottomGarment = null
-            dayInfo.shoesGarment = null
-            dayInfo.hatGarment = null
-            dayInfo.accessories = emptyList()
         }
     }
 }

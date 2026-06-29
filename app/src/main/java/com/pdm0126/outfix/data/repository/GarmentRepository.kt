@@ -15,19 +15,14 @@ import java.util.UUID
 class GarmentRepository(
     private val garmentDao: GarmentDao
 ) {
-    // Flow of ALL garments (includes LENT — used by lent panel selector)
     val garmentsFlow: Flow<List<GarmentResponse>> = garmentDao.getAllGarmentsFlow().map { entities ->
         entities.map { it.toDto() }
     }
 
-    // Flow of AVAILABLE garments only (excludes LENT — used by the closet)
     val availableGarmentsFlow: Flow<List<GarmentResponse>> = garmentDao.getAllGarmentsFlow().map { entities ->
         entities.filter { it.status != "LENT" }.map { it.toDto() }
     }
 
-    /**
-     * Refreshes local DB with data from the remote server.
-     */
     suspend fun refreshGarments() {
         try {
             val response = RetrofitClient.garmentApi.getGarments()
@@ -43,13 +38,9 @@ class GarmentRepository(
                 }
             }
         } catch (e: Exception) {
-            // Network error, just rely on local DB
         }
     }
 
-    /**
-     * Attempts to create a garment on the server. If it fails, saves it locally as pending.
-     */
     suspend fun createGarment(request: CreateGarmentRequest): Result<GarmentResponse> {
         return try {
             val response = RetrofitClient.garmentApi.createGarment(request)
@@ -63,7 +54,6 @@ class GarmentRepository(
                 Result.failure(Exception(response.message ?: "Unknown server error"))
             }
         } catch (e: Exception) {
-            // Network failure: Save locally
             val localId = "local_${UUID.randomUUID()}"
             val mockGarment = GarmentResponse(
                 id = localId,
@@ -88,9 +78,6 @@ class GarmentRepository(
         }
     }
 
-    /**
-     * Tries to sync pending garments to the server.
-     */
     suspend fun syncPendingGarments() {
         val pending = withContext(Dispatchers.IO) { garmentDao.getPendingSyncGarments() }
         for (entity in pending) {
@@ -115,31 +102,15 @@ class GarmentRepository(
                     }
                 }
             } catch (e: Exception) {
-                // Still failing, leave it as pending
             }
         }
     }
 
-    /**
-     * Updates a garment locally first (optimistic), then syncs to server.
-     * Also updates any planner day references that hold this garment.
-     */
     suspend fun updateGarment(garment: GarmentResponse) {
-        // 1. Optimistic local update
         withContext(Dispatchers.IO) {
             garmentDao.insertGarment(garment.toEntity(isPendingSync = false))
         }
 
-        // 2. Update planner day references in MockDatabase (keeps planner consistent)
-        com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
-            if (day.topGarment?.id == garment.id) day.topGarment = garment
-            if (day.bottomGarment?.id == garment.id) day.bottomGarment = garment
-            if (day.shoesGarment?.id == garment.id) day.shoesGarment = garment
-            if (day.hatGarment?.id == garment.id) day.hatGarment = garment
-            day.accessories = day.accessories.map { if (it.id == garment.id) garment else it }
-        }
-
-        // 3. Try to push to server
         try {
             val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
                 name = garment.name,
@@ -155,40 +126,19 @@ class GarmentRepository(
             )
             RetrofitClient.garmentApi.updateGarment(garment.id, request)
         } catch (e: Exception) {
-            // Server unreachable — local DB already has the updated data
         }
     }
 
-    /**
-     * Deletes a garment locally first (optimistic), then syncs to server.
-     * Also removes the garment from any planner day that references it.
-     */
     suspend fun deleteGarment(id: String) {
-        // 1. Optimistic local delete
         withContext(Dispatchers.IO) {
             garmentDao.deleteGarmentById(id)
         }
-
-        // 2. Remove from planner day references
-        com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
-            if (day.topGarment?.id == id) day.topGarment = null
-            if (day.bottomGarment?.id == id) day.bottomGarment = null
-            if (day.shoesGarment?.id == id) day.shoesGarment = null
-            if (day.hatGarment?.id == id) day.hatGarment = null
-            day.accessories = day.accessories.filter { it.id != id }
-        }
-
-        // 3. Try to push to server
         try {
             RetrofitClient.garmentApi.deleteGarment(id)
         } catch (e: Exception) {
-            // Server unreachable — local DB already deleted it
         }
     }
 
-    /**
-     * marca prendas como 'IN_WASH' (envia al laundry).
-     */
     suspend fun sendToLaundry(garments: List<GarmentResponse>) {
         val updatedGarments = garments.map { it.copy(status = "IN_WASH") }
         
@@ -196,18 +146,6 @@ class GarmentRepository(
             garmentDao.insertGarments(updatedGarments.map { it.toEntity(isPendingSync = false) })
         }
         
-        // Actualiza las prendas en memoria
-        updatedGarments.forEach { garment ->
-            com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.forEach { day ->
-                if (day.topGarment?.id == garment.id) day.topGarment = garment
-                if (day.bottomGarment?.id == garment.id) day.bottomGarment = garment
-                if (day.shoesGarment?.id == garment.id) day.shoesGarment = garment
-                if (day.hatGarment?.id == garment.id) day.hatGarment = garment
-                day.accessories = day.accessories.map { if (it.id == garment.id) garment else it }
-            }
-        }
-        
-        // Intenta enviar al servidor
         for (garment in updatedGarments) {
             try {
                 val request = com.pdm0126.outfix.data.api.dto.UpdateGarmentRequest(
@@ -224,14 +162,10 @@ class GarmentRepository(
                 )
                 RetrofitClient.garmentApi.updateGarment(garment.id, request)
             } catch (e: Exception) {
-                // Ignora errores de red, se guarda localmente
             }
         }
     }
 
-    /**
-     * marca una prenda como 'AVAILABLE' (lavada).
-     */
     suspend fun markAsWashed(garmentId: String) {
         val entity = withContext(Dispatchers.IO) { garmentDao.getGarmentById(garmentId) } ?: return
         val updatedDto = entity.toDto().copy(status = "AVAILABLE")

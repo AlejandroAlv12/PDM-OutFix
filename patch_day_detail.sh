@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNEREOF' > app/src/main/java/com/pdm0126/outfix/screens/planner/DayDetailOverlay.kt
 package com.pdm0126.outfix.screens.planner
 
 import androidx.compose.animation.AnimatedVisibility
@@ -99,13 +101,7 @@ fun DayDetailOverlay(
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 0.4f else 0f }
 
         val contentAlpha by transition.animateFloat(
-            transitionSpec = { 
-                if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) {
-                    tween(300, delayMillis = 100)
-                } else {
-                    tween(100)
-                }
-            },
+            transitionSpec = { tween(300, delayMillis = 100) },
             label = "contentAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
 
@@ -140,8 +136,7 @@ fun DayDetailOverlay(
         val charLocalY = charAbsY - y
         
         // Text Animation
-        val textWidthEstimate = (activeDayInfo.day.length * 9).dp
-        val textAbsStartX = startX + (startW / 2) - (textWidthEstimate / 2)
+        val textAbsStartX = startX + 24.dp
         val textAbsStartY = startY + 12.dp
         val textAbsFinalX = finalX + 24.dp
         val textAbsFinalY = finalY + 24.dp
@@ -318,7 +313,7 @@ fun DayDetailOverlay(
                                 fontSize = 13.sp,
                                 color = Color.Gray,
                                 modifier = Modifier
-                                    .offset(x = 24.dp, y = 54.dp)
+                                    .offset(x = 24.dp, y = textFinalY + 30.dp)
                                     .graphicsLayer { alpha = contentAlpha }
                             )
                             
@@ -362,3 +357,4 @@ fun DayDetailOverlay(
         }
     }
 }
+INNEREOF

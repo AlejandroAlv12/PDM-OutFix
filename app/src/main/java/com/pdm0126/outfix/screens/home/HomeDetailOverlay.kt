@@ -1,4 +1,4 @@
-package com.pdm0126.outfix.screens.planner
+package com.pdm0126.outfix.screens.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -14,15 +14,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -38,18 +36,16 @@ import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.model.DayInfo
 import com.pdm0126.outfix.screens.closet.ClosetOverlayState
 import com.pdm0126.outfix.ui.CharacterWithClothes
-import com.pdm0126.outfix.ui.GlobalNavigationState
-import com.pdm0126.outfix.ui.OutFixScreen
 
 @Composable
-fun DayDetailOverlay(
+fun HomeDetailOverlay(
     dayInfo: DayInfo?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
     onDismiss: () -> Unit
 ) {
     AnimatedVisibility(
-        visible = ClosetOverlayState.isDayOverlayActive,
+        visible = ClosetOverlayState.isHomeOverlayActive,
         enter = fadeIn(animationSpec = tween(durationMillis = 1)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
@@ -61,7 +57,7 @@ fun DayDetailOverlay(
         val density = androidx.compose.ui.platform.LocalDensity.current
 
         val startW = with(density) { (sourceBounds?.width ?: 120f).toDp() }
-        val startH = with(density) { (sourceBounds?.height ?: 200f).toDp() }
+        val startH = with(density) { (sourceBounds?.height ?: 300f).toDp() }
         val startX = with(density) { (sourceBounds?.left ?: 0f).toDp() }
         val startY = with(density) { (sourceBounds?.top ?: 0f).toDp() }
 
@@ -85,7 +81,7 @@ fun DayDetailOverlay(
             if (it == androidx.compose.animation.EnterExitState.Visible) finalH else startH
         }
         val radius by transition.animateDp(transitionSpec = { transitionSpec() }, label = "radius") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 24.dp else 12.dp
+            if (it == androidx.compose.animation.EnterExitState.Visible) 24.dp else 16.dp
         }
         
         val cardColor by androidx.compose.animation.animateColorAsState(
@@ -110,10 +106,15 @@ fun DayDetailOverlay(
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
 
         // Character Box Dimensions
-        val charStartW = startW - 16.dp
-        val charStartH = startH - 60.dp
-        val charStartX = startX + 8.dp
-        val charStartY = startY + 48.dp
+        // Original character Box is bounded by padding(16.dp), plus some spaces for texts.
+        // It has weight(1f), so its height varies, but let's estimate it based on its constraints.
+        // In HomeScreen Hoy widget: padding = 16.dp on all sides.
+        // Top text "Hoy" (24.sp) ~ 34.dp height, plus 16.dp spacer = 50.dp offset from top padding -> 66.dp from top edge
+        // Bottom text "Style" (16.sp) ~ 24.dp height, plus 16.dp spacer = 40.dp offset from bottom padding -> 56.dp from bottom edge
+        val charStartW = startW - 32.dp
+        val charStartH = startH - 122.dp
+        val charStartX = startX + 16.dp
+        val charStartY = startY + 66.dp
         
         val charFinalW = finalW - 48.dp
         val charFinalH = 220.dp
@@ -133,16 +134,19 @@ fun DayDetailOverlay(
             if (it == androidx.compose.animation.EnterExitState.Visible) charFinalH else charStartH
         }
         val charRadius by transition.animateDp(transitionSpec = { transitionSpec() }, label = "charRadius") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 20.dp else 12.dp
+            if (it == androidx.compose.animation.EnterExitState.Visible) 20.dp else 16.dp
         }
         
         val charLocalX = charAbsX - x
         val charLocalY = charAbsY - y
         
-        // Text Animation
-        val textWidthEstimate = (activeDayInfo.day.length * 9).dp
-        val textAbsStartX = startX + (startW / 2) - (textWidthEstimate / 2)
-        val textAbsStartY = startY + 12.dp
+        val charScale by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "charScale") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 1.5f
+        }
+        
+        val hoyWidthEstimate = 45.dp
+        val textAbsStartX = startX + (startW / 2) - (hoyWidthEstimate / 2)
+        val textAbsStartY = startY + 16.dp
         val textAbsFinalX = finalX + 24.dp
         val textAbsFinalY = finalY + 24.dp
         
@@ -156,8 +160,56 @@ fun DayDetailOverlay(
         val textLocalY = textAbsY - y
         
         val textSize by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "textSize") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 26f else 18f
+            if (it == androidx.compose.animation.EnterExitState.Visible) 26f else 24f
         }
+
+        val allGarments = listOfNotNull(
+            activeDayInfo.topGarment,
+            activeDayInfo.bottomGarment,
+            activeDayInfo.shoesGarment,
+            activeDayInfo.hatGarment
+        ) + activeDayInfo.accessories
+        
+        val styles = allGarments.mapNotNull { it.style }.filter { it.isNotBlank() }
+        
+        val styleString = if (styles.isEmpty()) {
+            "Casual"
+        } else {
+            val styleCounts = styles.groupingBy { it.lowercase() }.eachCount()
+            val maxCount = styleCounts.values.maxOrNull() ?: 0
+            val majorityStyles = styleCounts.filterValues { it == maxCount }.keys.toList()
+        
+            when {
+                majorityStyles.size == 1 -> majorityStyles.first()
+                maxCount == 1 -> "Exótico"
+                else -> "Mixto"
+            }
+        }.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+        val styleWidthEstimate = (styleString.length * 8).dp
+        val styleAbsStartX = startX + (startW / 2) - (styleWidthEstimate / 2)
+        val styleAbsStartY = startY + startH - 40.dp
+        
+        val styleAbsFinalX = finalX + 24.dp
+        val styleAbsFinalY = finalY + 54.dp
+        
+        val styleAbsX by transition.animateDp(transitionSpec = { transitionSpec() }, label = "styleX") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) styleAbsFinalX else styleAbsStartX
+        }
+        val styleAbsY by transition.animateDp(transitionSpec = { transitionSpec() }, label = "styleY") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) styleAbsFinalY else styleAbsStartY
+        }
+        val styleLocalX = styleAbsX - x
+        val styleLocalY = styleAbsY - y
+        
+        val styleSize by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "styleSize") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) 13f else 16f
+        }
+        
+        val styleColor by androidx.compose.animation.animateColorAsState(
+            targetValue = if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) Color.Gray else Color.Black,
+            animationSpec = tween(350)
+        )
 
         val backgroundLayer = rememberGraphicsLayer()
         var screenCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
@@ -175,7 +227,6 @@ fun DayDetailOverlay(
                         drawLayer(backgroundLayer)
                     }
             ) {
-                // Dim background — tapping it dismisses
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -187,7 +238,6 @@ fun DayDetailOverlay(
                         )
                 )
 
-                // Expanding card
                 Box(
                     modifier = Modifier
                         .offset(x = x, y = y)
@@ -202,7 +252,6 @@ fun DayDetailOverlay(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         
-                        // Scrollable Content
                         if (contentAlpha > 0f) {
                             Column(
                                 modifier = Modifier
@@ -211,12 +260,9 @@ fun DayDetailOverlay(
                                     .graphicsLayer { alpha = contentAlpha }
                                     .padding(horizontal = 24.dp)
                             ) {
-                                // Empty space for Header and Character Preview
                                 Spacer(modifier = Modifier.height(charLocalY + charH))
                                 
                                 Spacer(modifier = Modifier.height(20.dp))
-
-                                // Garment slots grid
                                 val slots = listOfNotNull(
                                     activeDayInfo.topGarment?.let { "Superior" to it },
                                     activeDayInfo.bottomGarment?.let { "Inferior" to it },
@@ -289,14 +335,18 @@ fun DayDetailOverlay(
                             }
                         }
                         
-                        // Absolutely positioned elements that animate seamlessly
-                        // Character Preview
                         Box(
                             modifier = Modifier
                                 .offset(x = charLocalX.coerceAtLeast(0.dp), y = charLocalY.coerceAtLeast(0.dp))
                                 .size(width = charW.coerceAtLeast(0.dp), height = charH.coerceAtLeast(0.dp))
                                 .clip(RoundedCornerShape(charRadius))
                                 .background(Color(0xFFF6EEE6))
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .offset(x = charLocalX.coerceAtLeast(0.dp), y = charLocalY.coerceAtLeast(0.dp))
+                                .size(width = charW.coerceAtLeast(0.dp), height = charH.coerceAtLeast(0.dp))
                         ) {
                             CharacterWithClothes(
                                 top = activeDayInfo.topGarment,
@@ -304,57 +354,26 @@ fun DayDetailOverlay(
                                 shoes = activeDayInfo.shoesGarment,
                                 head = activeDayInfo.hatGarment,
                                 accessories = activeDayInfo.accessories,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize().scale(charScale)
                             )
                         }
                         
-                        // Subtitle & Edit Button (Fade in only)
-                        if (contentAlpha > 0f) {
-                            val isEmpty = activeDayInfo.topGarment == null &&
-                                    activeDayInfo.bottomGarment == null &&
-                                    activeDayInfo.shoesGarment == null
-                            Text(
-                                text = if (isEmpty) "Sin outfit guardado" else "Outfit del día",
-                                fontSize = 13.sp,
-                                color = Color.Gray,
-                                modifier = Modifier
-                                    .offset(x = 24.dp, y = 54.dp)
-                                    .graphicsLayer { alpha = contentAlpha }
-                            )
-                            
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 24.dp, end = 24.dp)
-                                    .size(44.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.08f))
-                                    .graphicsLayer { alpha = contentAlpha }
-                                    .clickable {
-                                        onDismiss()
-                                        ClosetOverlayState.plannerEditDay = activeDayInfo.day
-                                        ClosetOverlayState.hasLoadedPlannerDay = false
-                                        GlobalNavigationState.requestedTab = OutFixScreen.Closet
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Edit,
-                                    contentDescription = "Editar día",
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                        
-                        // Day Title Text (Animates from small & centered-ish to big & left)
                         Text(
-                            text = activeDayInfo.day,
+                            text = "Hoy",
                             fontWeight = FontWeight.Bold,
                             fontSize = textSize.sp,
                             fontFamily = FontFamily.Serif,
                             color = Color.Black,
                             modifier = Modifier.offset(x = textLocalX, y = textLocalY)
+                        )
+                        
+                        Text(
+                            text = styleString,
+                            fontSize = styleSize.sp,
+                            fontWeight = if (styleSize > 14f) FontWeight.Bold else FontWeight.Normal,
+                            fontFamily = FontFamily.Serif,
+                            color = styleColor,
+                            modifier = Modifier.offset(x = styleLocalX, y = styleLocalY)
                         )
                     }
                 }

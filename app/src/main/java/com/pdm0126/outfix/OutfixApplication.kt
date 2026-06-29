@@ -23,6 +23,7 @@ class OutfixApplication : Application() {
         super.onCreate()
         instance = this
         createNotificationChannels()
+        com.pdm0126.outfix.utils.NotificationHelper.scheduleSunsetNotification(this)
     }
 
     private fun createNotificationChannels() {

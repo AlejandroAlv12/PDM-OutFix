@@ -1,6 +1,5 @@
 package com.pdm0126.outfix.screens.closet
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,15 +13,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -52,7 +48,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.boundsInRoot
 
 object ClosetOverlayState {
@@ -61,10 +56,12 @@ object ClosetOverlayState {
     var isOverlayActive by androidx.compose.runtime.mutableStateOf(false)
     var plannerEditDay by androidx.compose.runtime.mutableStateOf<String?>(null)
     var hasLoadedPlannerDay by androidx.compose.runtime.mutableStateOf(false)
-    // Day detail overlay
-    var detailDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.mock.DayInfo?>(null)
+    var detailDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.model.DayInfo?>(null)
     var detailDayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     var isDayOverlayActive by androidx.compose.runtime.mutableStateOf(false)
+    var isHomeOverlayActive by androidx.compose.runtime.mutableStateOf(false)
+    var homeOverlayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    var homeDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.model.DayInfo?>(null)
 }
 
 @Composable
@@ -72,6 +69,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
     val coroutineScope = rememberCoroutineScope()
     val repository = OutfixApplication.instance.garmentRepository
     val garments by repository.availableGarmentsFlow.collectAsState(initial = emptyList())
+    val plannerDays by OutfixApplication.instance.plannerRepository.plannerDaysFlow.collectAsState(initial = emptyList())
     var isLoading by remember { mutableStateOf(false) }
 
     var selectedTop by viewModel::selectedTop
@@ -80,18 +78,48 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
     var selectedHead by viewModel::selectedHead
     var selectedAccessories by viewModel::selectedAccessories
 
-    androidx.compose.runtime.LaunchedEffect(ClosetOverlayState.plannerEditDay) {
+    var originalTop by remember { mutableStateOf(selectedTop) }
+    var originalBottom by remember { mutableStateOf(selectedBottom) }
+    var originalShoes by remember { mutableStateOf(selectedShoes) }
+    var originalHead by remember { mutableStateOf(selectedHead) }
+    var originalAccessories by remember { mutableStateOf(selectedAccessories) }
+
+    val hasChanges = remember(selectedTop, selectedBottom, selectedShoes, selectedHead, selectedAccessories, originalTop, originalBottom, originalShoes, originalHead, originalAccessories) {
+        selectedTop != originalTop || selectedBottom != originalBottom || selectedShoes != originalShoes || selectedHead != originalHead || selectedAccessories != originalAccessories
+    }
+
+    val currentDayOfWeek = remember { java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) }
+
+    var lastLoadedDay by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var isClosingEditor by remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val loadOutfitForDay: (String?) -> Unit = { dayName ->
+        val dayInfo = if (dayName != null) {
+            plannerDays.find { it.day == dayName }
+        } else {
+            plannerDays.find { it.calendarDay == currentDayOfWeek }
+        }
+        if (dayInfo != null) {
+            selectedTop = dayInfo.topGarment
+            selectedBottom = dayInfo.bottomGarment
+            selectedShoes = dayInfo.shoesGarment
+            selectedHead = dayInfo.hatGarment
+            selectedAccessories = dayInfo.accessories
+
+            originalTop = dayInfo.topGarment
+            originalBottom = dayInfo.bottomGarment
+            originalShoes = dayInfo.shoesGarment
+            originalHead = dayInfo.hatGarment
+            originalAccessories = dayInfo.accessories
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(ClosetOverlayState.plannerEditDay, plannerDays) {
         val plannerDay = ClosetOverlayState.plannerEditDay
-        if (plannerDay != null && !ClosetOverlayState.hasLoadedPlannerDay) {
-            val dayInfo = com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.find { it.day == plannerDay }
-            if (dayInfo != null) {
-                selectedTop = dayInfo.topGarment
-                selectedBottom = dayInfo.bottomGarment
-                selectedShoes = dayInfo.shoesGarment
-                selectedHead = dayInfo.hatGarment
-                selectedAccessories = dayInfo.accessories
-                ClosetOverlayState.hasLoadedPlannerDay = true
-            }
+        val targetDayKey = plannerDay ?: "TODAY"
+        if (plannerDays.isNotEmpty() && lastLoadedDay != targetDayKey && lastLoadedDay != "TRANSITION") {
+            loadOutfitForDay(plannerDay)
+            lastLoadedDay = targetDayKey
         }
     }
 
@@ -292,6 +320,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     .fillMaxWidth()
                     .padding(top = 16.dp)
             ) {
+            Box(modifier = Modifier.zIndex(2f)) {
                 OutfitPreview(
                     top = selectedTop,
                     bottom = selectedBottom,
@@ -299,6 +328,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     head = selectedHead,
                     accessories = selectedAccessories
                 )
+            }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -324,7 +354,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     androidx.compose.animation.AnimatedVisibility(
                         visible = plannerDay != null,
                         enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, clip = false),
-                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, delayMillis = 200)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End, clip = false)
+                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 250)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End, clip = false)
                     ) {
                         var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isRandomPressedInstant by remember { mutableStateOf(false) }
@@ -413,9 +443,16 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                             Icon(imageVector = androidx.compose.material.icons.Icons.Rounded.Shuffle, contentDescription = "Randomize", tint = Color.White)
                         }
                     }
-
+                    
+                    val saveOffsetY by androidx.compose.animation.core.animateDpAsState(
+                        targetValue = if (hasChanges || plannerDay != null || isClosingEditor) 0.dp else (-100).dp,
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        label = "saveOffsetY"
+                    )
+                    
                     Box(
                         modifier = Modifier
+                            .offset(y = saveOffsetY)
                             .height(50.dp)
                             .zIndex(1f)
                             .graphicsLayer {
@@ -439,37 +476,42 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                 }
                             }
                             .clickable(
+                                enabled = hasChanges || plannerDay != null,
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                 indication = null
                             ) {
-                                if (plannerDay != null) {
-                                    val capturedTop = selectedTop
-                                    val capturedBottom = selectedBottom
-                                    val capturedShoes = selectedShoes
-                                    val capturedHead = selectedHead
-                                    val capturedAccessories = selectedAccessories.toList()
-                                    val capturedDay = plannerDay!!
+                                val targetDay = plannerDay ?: plannerDays.find { it.calendarDay == currentDayOfWeek }?.day ?: "Lunes"
+                                val capturedTop = selectedTop
+                                val capturedBottom = selectedBottom
+                                val capturedShoes = selectedShoes
+                                val capturedHead = selectedHead
+                                val capturedAccessories = selectedAccessories.toList()
 
-                                    selectedTop = null
-                                    selectedBottom = null
-                                    selectedShoes = null
-                                    selectedHead = null
-                                    selectedAccessories = emptyList()
-                                    ClosetOverlayState.plannerEditDay = null
-                                    com.pdm0126.outfix.ui.GlobalNavigationState.requestedTab = com.pdm0126.outfix.ui.OutFixScreen.WeeklyPlanner
-
-                                    coroutineScope.launch {
-                                        OutfixApplication.instance.plannerRepository.saveDayOutfit(
-                                            dayKey = capturedDay,
-                                            top = capturedTop,
-                                            bottom = capturedBottom,
-                                            shoes = capturedShoes,
-                                            head = capturedHead,
-                                            accessories = capturedAccessories
-                                        )
+                                coroutineScope.launch {
+                                    OutfixApplication.instance.plannerRepository.saveDayOutfit(
+                                        dayKey = targetDay,
+                                        top = capturedTop,
+                                        bottom = capturedBottom,
+                                        shoes = capturedShoes,
+                                        head = capturedHead,
+                                        accessories = capturedAccessories
+                                    )
+                                    
+                                    if (plannerDay != null) {
+                                        isClosingEditor = true
+                                        ClosetOverlayState.plannerEditDay = null
+                                        lastLoadedDay = "TRANSITION"
+                                        kotlinx.coroutines.delay(500)
+                                        isClosingEditor = false
+                                        loadOutfitForDay(null)
+                                        lastLoadedDay = "TODAY"
+                                    } else {
+                                        originalTop = capturedTop
+                                        originalBottom = capturedBottom
+                                        originalShoes = capturedShoes
+                                        originalHead = capturedHead
+                                        originalAccessories = capturedAccessories
                                     }
-                                } else {
-                                    /* TODO: Show success message or save outfit */
                                 }
                             }
                             .clip(RoundedCornerShape(percent = 50)),
@@ -510,13 +552,13 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                             horizontalArrangement = Arrangement.Center
                         ) {
                             val currentDayOfWeek = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
-                            val isToday = plannerDay != null && com.pdm0126.outfix.data.mock.MockDatabase.plannerDays.find { it.day == plannerDay }?.calendarDay == currentDayOfWeek
+                            val isToday = plannerDay != null && plannerDays.find { it.day == plannerDay }?.calendarDay == currentDayOfWeek
                             
                             val buttonText = if (plannerDay != null) {
                                 if (isToday) "Guardar hoy" else "Guardar $plannerDay"
                             } else "Guardar"
                             
-                            val buttonIcon = if (plannerDay != null) androidx.compose.material.icons.Icons.Outlined.Save else Icons.Rounded.Add
+                            val buttonIcon = androidx.compose.material.icons.Icons.Rounded.Check
 
                             Text(buttonText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(modifier = Modifier.width(12.dp))
@@ -527,7 +569,7 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                     androidx.compose.animation.AnimatedVisibility(
                         visible = plannerDay != null,
                         enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start, clip = false),
-                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, delayMillis = 200)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start, clip = false)
+                        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 250)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start, clip = false)
                     ) {
                         var cancelButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isCancelPressedInstant by remember { mutableStateOf(false) }
@@ -567,12 +609,16 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
                                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                     indication = null
                                 ) {
-                                    selectedTop = null
-                                    selectedBottom = null
-                                    selectedShoes = null
-                                    selectedHead = null
-                                    selectedAccessories = emptyList()
-                                    ClosetOverlayState.plannerEditDay = null
+                                    coroutineScope.launch {
+                                        isClosingEditor = true
+                                        ClosetOverlayState.plannerEditDay = null
+                                        lastLoadedDay = "TRANSITION"
+
+                                        kotlinx.coroutines.delay(500)
+                                        isClosingEditor = false
+                                        loadOutfitForDay(null)
+                                        lastLoadedDay = "TODAY"
+                                    }
                                 }
                                 .clip(androidx.compose.foundation.shape.CircleShape),
                             contentAlignment = Alignment.Center
@@ -657,7 +703,6 @@ fun OutfitPreview(
 
         val isDress = top?.category?.equals("Vestido", ignoreCase = true) == true
 
-        // Expanded white slot column — takes all remaining space
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -666,25 +711,18 @@ fun OutfitPreview(
                 .background(Color.White)
                 .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
         ) {
-            // Cabeza (small, weight 1)
             SlotWithAccessories("Cabeza", head, headAccs, Modifier.weight(1f))
 
             if (isDress) {
-                // Vestido gets extra height (weight 3 = big)
                 SlotWithAccessories("Vestido", top, topAccs, Modifier.weight(3f))
             } else {
-                // Superior and Inferior each weight 2 (bigger than head/shoes)
                 SlotWithAccessories("Superior", top, topAccs, Modifier.weight(2f))
                 SlotWithAccessories("Inferior", bottom, bottomAccs, Modifier.weight(2f))
             }
-
-            // Calzado (weight 1.5 — between main and head)
             SlotWithAccessories("Calzado", shoes, shoesAccs, Modifier.weight(1.5f))
         }
 
         Spacer(modifier = Modifier.width(10.dp))
-
-        // Character preview
         Box(modifier = Modifier.fillMaxHeight().aspectRatio(0.5f)) {
             com.pdm0126.outfix.ui.CharacterWithClothes(
                 top = top,
@@ -698,7 +736,6 @@ fun OutfitPreview(
     }
 }
 
-/** A garment slot that shows the main item plus any accessories as small chips at the bottom. */
 @Composable
 fun SlotWithAccessories(
     title: String,
@@ -711,7 +748,6 @@ fun SlotWithAccessories(
             .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        // Main garment image
         if (mainItem != null) {
             AsyncImage(
                 model = mainItem.imageUrl,
@@ -721,7 +757,6 @@ fun SlotWithAccessories(
             )
         }
 
-        // Accessories as small chips at the bottom-start
         if (accessories.isNotEmpty()) {
             Row(
                 modifier = Modifier
