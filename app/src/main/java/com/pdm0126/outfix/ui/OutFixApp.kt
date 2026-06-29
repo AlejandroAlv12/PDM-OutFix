@@ -23,6 +23,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.drawscope.scale
+import com.pdm0126.outfix.screens.menu.HamburgerMenuOverlay
+import com.pdm0126.outfix.screens.menu.HamburgerMenuState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
