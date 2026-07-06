@@ -87,65 +87,103 @@ fun HomeScreen() {
             count
         }
     
+        val scrollState = rememberScrollState()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
     
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val haptic = LocalHapticFeedback.current
-                Box(
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(300.dp)
+                        .fillMaxWidth()
+                        .height(320.dp)
                         .onGloballyPositioned { coords ->
                             try { ClosetOverlayState.homeOverlayBounds = coords.boundsInRoot() } catch (e: Exception) {}
                         }
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFFF6EEE6))
-                        .combinedClickable(
-                            onLongClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                ClosetOverlayState.homeDayInfo = DayInfo(
-                                    day = "Hoy",
-                                    calendarDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK),
-                                    topColor = Color.Transparent,
-                                    bottomColor = Color.Transparent,
-                                    shoesColor = Color.Transparent,
-                                    hatColor = Color.Transparent,
-                                    topGarment = todayInfo?.topGarment,
-                                    bottomGarment = todayInfo?.bottomGarment,
-                                    shoesGarment = todayInfo?.shoesGarment,
-                                    hatGarment = todayInfo?.hatGarment,
-                                    accessories = todayInfo?.accessories ?: emptyList()
-                                )
-                                ClosetOverlayState.isHomeOverlayActive = true
-                            },
-                            onClick = {}
-                        )
+                        .clickable {
+                            val topOffsetPx = with(density) { 24.dp.toPx() }
+                            if (scrollState.value > topOffsetPx) return@clickable
+                            
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            ClosetOverlayState.homeDayInfo = DayInfo(
+                                day = "Hoy",
+                                calendarDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK),
+                                topColor = Color.Transparent,
+                                bottomColor = Color.Transparent,
+                                shoesColor = Color.Transparent,
+                                hatColor = Color.Transparent,
+                                topGarment = todayInfo?.topGarment,
+                                bottomGarment = todayInfo?.bottomGarment,
+                                shoesGarment = todayInfo?.shoesGarment,
+                                hatGarment = todayInfo?.hatGarment,
+                                accessories = todayInfo?.accessories ?: emptyList()
+                            )
+                            ClosetOverlayState.isHomeOverlayActive = true
+                        }
                         .graphicsLayer { alpha = if (ClosetOverlayState.isHomeOverlayActive) 0f else 1f }
-                        .padding(16.dp)
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val headCategories = remember { listOf("Gafas", "Joyería") }
+                    val topCategories = remember { listOf("Bufanda", "Corbata") }
+                    val bottomCategories = remember { listOf("Reloj", "Cinturón") }
+                    val shoesCategories = remember { listOf("Bolso", "Mochila", "Otro") }
+
+                    val headAccs = remember(todayInfo?.accessories) { todayInfo?.accessories?.filter { it.category in headCategories } ?: emptyList() }
+                    val topAccs = remember(todayInfo?.accessories) { todayInfo?.accessories?.filter { it.category in topCategories } ?: emptyList() }
+                    val bottomAccs = remember(todayInfo?.accessories) { todayInfo?.accessories?.filter { it.category in bottomCategories } ?: emptyList() }
+                    val shoesAccs = remember(todayInfo?.accessories) { todayInfo?.accessories?.filter { it.category in shoesCategories } ?: emptyList() }
+
+                    val isDress = todayInfo?.topGarment?.category?.equals("Vestido", ignoreCase = true) == true
+
                     Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    ) {
+                        com.pdm0126.outfix.screens.closet.SlotWithAccessories("Cabeza", todayInfo?.hatGarment, headAccs, Modifier.weight(1f))
+
+                        if (isDress) {
+                            com.pdm0126.outfix.screens.closet.SlotWithAccessories("Vestido", todayInfo?.topGarment, topAccs, Modifier.weight(3f))
+                        } else {
+                            com.pdm0126.outfix.screens.closet.SlotWithAccessories("Superior", todayInfo?.topGarment, topAccs, Modifier.weight(2f))
+                            com.pdm0126.outfix.screens.closet.SlotWithAccessories("Inferior", todayInfo?.bottomGarment, bottomAccs, Modifier.weight(2f))
+                        }
+                        com.pdm0126.outfix.screens.closet.SlotWithAccessories("Calzado", todayInfo?.shoesGarment, shoesAccs, Modifier.weight(1.5f))
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(0.5f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = "Hoy",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
+                            fontSize = 22.sp,
                             color = Color.Black,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
                         )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
                         
                         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                             CharacterWithClothes(
@@ -154,11 +192,9 @@ fun HomeScreen() {
                                 shoes = todayInfo?.shoesGarment,
                                 head = todayInfo?.hatGarment,
                                 accessories = todayInfo?.accessories ?: emptyList(),
-                                modifier = Modifier.fillMaxSize().scale(1.5f)
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
                         
                         val allGarments = listOfNotNull(
                             todayInfo?.topGarment,
@@ -182,62 +218,25 @@ fun HomeScreen() {
                                 else -> "Mixto"
                             }
                         }
+                        
                         Text(
                             text = style.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
                             color = Color.Black,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
                         )
                     }
                 }
                 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(300.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFFF6EEE6))
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Racha",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 22.sp,
-                                color = Color.Black,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.LocalFireDepartment,
-                                contentDescription = "Racha",
-                                tint = Color(0xFFFF7043),
-                                modifier = Modifier.size(50.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = streak.toString(),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp,
-                                color = Color.Black
-                            )
-                        }
-                    }
-                    
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                            .height(140.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFFF6EEE6))
                             .clickable {
@@ -271,6 +270,42 @@ fun HomeScreen() {
                             tint = Color.Black,
                             modifier = Modifier.size(56.dp)
                         )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFF6EEE6))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Racha",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 22.sp,
+                                color = Color.Black,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Icon(
+                                imageVector = Icons.Rounded.LocalFireDepartment,
+                                contentDescription = "Racha",
+                                tint = Color(0xFFFF7043),
+                                modifier = Modifier.size(50.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = streak.toString(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                color = Color.Black
+                            )
+                        }
                     }
                 }
             }

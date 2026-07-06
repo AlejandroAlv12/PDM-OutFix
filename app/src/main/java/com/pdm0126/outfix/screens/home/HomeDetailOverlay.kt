@@ -104,17 +104,10 @@ fun HomeDetailOverlay(
             },
             label = "contentAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
-
-        // Character Box Dimensions
-        // Original character Box is bounded by padding(16.dp), plus some spaces for texts.
-        // It has weight(1f), so its height varies, but let's estimate it based on its constraints.
-        // In HomeScreen Hoy widget: padding = 16.dp on all sides.
-        // Top text "Hoy" (24.sp) ~ 34.dp height, plus 16.dp spacer = 50.dp offset from top padding -> 66.dp from top edge
-        // Bottom text "Style" (16.sp) ~ 24.dp height, plus 16.dp spacer = 40.dp offset from bottom padding -> 56.dp from bottom edge
-        val charStartW = startW - 32.dp
-        val charStartH = startH - 122.dp
-        val charStartX = startX + 16.dp
-        val charStartY = startY + 66.dp
+        val charStartW = 150.dp
+        val charStartH = 250.dp
+        val charStartX = startX + startW - 160.dp
+        val charStartY = startY + 38.dp
         
         val charFinalW = finalW - 48.dp
         val charFinalH = 220.dp
@@ -141,12 +134,12 @@ fun HomeDetailOverlay(
         val charLocalY = charAbsY - y
         
         val charScale by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "charScale") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 1.5f
+            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 1f
         }
         
         val hoyWidthEstimate = 45.dp
-        val textAbsStartX = startX + (startW / 2) - (hoyWidthEstimate / 2)
-        val textAbsStartY = startY + 16.dp
+        val textAbsStartX = startX + startW - 85.dp - (hoyWidthEstimate / 2)
+        val textAbsStartY = startY + 10.dp
         val textAbsFinalX = finalX + 24.dp
         val textAbsFinalY = finalY + 24.dp
         
@@ -187,8 +180,8 @@ fun HomeDetailOverlay(
         }.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
         val styleWidthEstimate = (styleString.length * 8).dp
-        val styleAbsStartX = startX + (startW / 2) - (styleWidthEstimate / 2)
-        val styleAbsStartY = startY + startH - 40.dp
+        val styleAbsStartX = startX + startW - 85.dp - (styleWidthEstimate / 2)
+        val styleAbsStartY = startY + startH - 28.dp
         
         val styleAbsFinalX = finalX + 24.dp
         val styleAbsFinalY = finalY + 54.dp
