@@ -88,6 +88,10 @@ fun GarmentDetailOverlay(
 
         val transition = this.transition
         
+        androidx.activity.compose.BackHandler(enabled = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive) {
+            onDismiss()
+        }
+        
         LaunchedEffect(transition.currentState) {
             if (transition.currentState == androidx.compose.animation.EnterExitState.PostExit && !com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive) {
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarment = null

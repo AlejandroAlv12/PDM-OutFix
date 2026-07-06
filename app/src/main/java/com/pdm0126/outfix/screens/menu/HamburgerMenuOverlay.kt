@@ -64,6 +64,14 @@ fun HamburgerMenuOverlay(
 
     var menuState by remember { mutableStateOf(MenuState.MENU) }
     var selectedLentItem by remember { mutableStateOf<LentItem?>(null) }
+    
+    androidx.activity.compose.BackHandler(enabled = isOpen) {
+        when (menuState) {
+            MenuState.MENU -> HamburgerMenuState.isOpen = false
+            MenuState.LENT_LIST -> menuState = MenuState.MENU
+            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuState = MenuState.LENT_LIST
+        }
+    }
 
     val transitionState = remember { MutableTransitionState(false) }
     transitionState.targetState = isOpen
@@ -118,11 +126,10 @@ fun HamburgerMenuOverlay(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        if (menuState == MenuState.MENU) {
-                            HamburgerMenuState.isOpen = false
-                            menuState = MenuState.MENU
-                        } else {
-                            menuState = MenuState.MENU
+                        when (menuState) {
+                            MenuState.MENU -> HamburgerMenuState.isOpen = false
+                            MenuState.LENT_LIST -> menuState = MenuState.MENU
+                            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuState = MenuState.LENT_LIST
                         }
                     }
                 )

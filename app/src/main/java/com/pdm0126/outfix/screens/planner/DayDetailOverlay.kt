@@ -56,6 +56,10 @@ fun DayDetailOverlay(
     ) {
         val activeDayInfo = dayInfo ?: return@AnimatedVisibility
 
+        androidx.activity.compose.BackHandler(enabled = ClosetOverlayState.isDayOverlayActive) {
+            onDismiss()
+        }
+
         val transition = this.transition
 
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current

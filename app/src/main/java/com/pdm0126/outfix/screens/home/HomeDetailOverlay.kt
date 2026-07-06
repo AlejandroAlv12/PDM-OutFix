@@ -55,6 +55,14 @@ fun HomeDetailOverlay(
         val activeDayInfo = dayInfo ?: return@AnimatedVisibility
 
         var expandedGarment by remember { mutableStateOf<com.pdm0126.outfix.data.api.dto.GarmentResponse?>(null) }
+        
+        androidx.activity.compose.BackHandler(enabled = ClosetOverlayState.isHomeOverlayActive) {
+            if (expandedGarment != null) {
+                expandedGarment = null
+            } else {
+                onDismiss()
+            }
+        }
 
         val transition = this.transition
 

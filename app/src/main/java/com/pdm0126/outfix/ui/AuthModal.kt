@@ -40,6 +40,10 @@ fun AuthModal(
     
     var isLogin by remember { mutableStateOf(true) }
     
+    androidx.activity.compose.BackHandler(enabled = isVisible) {
+        onDismiss()
+    }
+    
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
