@@ -65,6 +65,22 @@ fun HamburgerMenuOverlay(
     var menuState by remember { mutableStateOf(MenuState.MENU) }
     var selectedLentItem by remember { mutableStateOf<LentItem?>(null) }
     
+    LaunchedEffect(isOpen, HamburgerMenuState.targetLentItem) {
+        val target = HamburgerMenuState.targetLentItem
+        if (target != null && isOpen) {
+            menuState = MenuState.MENU
+            kotlinx.coroutines.delay(600)
+            
+            menuState = MenuState.LENT_LIST
+            kotlinx.coroutines.delay(400)
+            
+            selectedLentItem = target
+            menuState = MenuState.LENT_DETAIL
+            
+            HamburgerMenuState.targetLentItem = null
+        }
+    }
+    
     androidx.activity.compose.BackHandler(enabled = isOpen) {
         when (menuState) {
             MenuState.MENU -> HamburgerMenuState.isOpen = false

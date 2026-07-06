@@ -12,6 +12,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.graphics.graphicsLayer
 import com.pdm0126.outfix.screens.closet.ClosetOverlayState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import com.pdm0126.outfix.data.model.DayInfo
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -89,6 +92,28 @@ fun HomeScreen() {
     
         val scrollState = rememberScrollState()
         val density = androidx.compose.ui.platform.LocalDensity.current
+        
+        var previousScrollOffset by remember { mutableStateOf(0) }
+        LaunchedEffect(scrollState) {
+            androidx.compose.runtime.snapshotFlow { scrollState.value }
+                .collect { currentOffset ->
+                    val diff = currentOffset - previousScrollOffset
+                    
+                    if (diff > 20) {
+                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = false
+                    } else if (diff < -20) {
+                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = true
+                    }
+                    
+                    if (currentOffset == 0) {
+                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = true
+                    }
+                    
+                    if (kotlin.math.abs(diff) > 20) {
+                        previousScrollOffset = currentOffset
+                    }
+                }
+        }
 
         Column(
             modifier = Modifier
@@ -405,7 +430,7 @@ fun HomeScreen() {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFFF6EEE6))
-                        .padding(16.dp)
+                        .padding(vertical = 16.dp)
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -421,16 +446,50 @@ fun HomeScreen() {
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        val consumeHorizontalScroll = remember {
+                            object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                                override fun onPostScroll(
+                                    consumed: androidx.compose.ui.geometry.Offset,
+                                    available: androidx.compose.ui.geometry.Offset,
+                                    source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+                                ): androidx.compose.ui.geometry.Offset {
+                                    return available.copy(y = 0f)
+                                }
+                            }
+                        }
+                        
+                        val lentScrollLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+                        
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clipToBounds()
                         ) {
-                            items(pendingLentItems) { lentItem ->
-                                Box(
+                            val currentWidthPx = constraints.maxWidth.toFloat()
+                            
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(horizontal = 24.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .nestedScroll(consumeHorizontalScroll)
+                                    .drawWithContent {
+                                        lentScrollLayer.record {
+                                            this@drawWithContent.drawContent()
+                                        }
+                                    }
+                            ) {
+                                items(pendingLentItems) { lentItem ->
+                                    Box(
                                     modifier = Modifier
                                         .size(80.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.White)
-                                        .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                                        .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            com.pdm0126.outfix.screens.menu.HamburgerMenuState.targetLentItem = lentItem
+                                            com.pdm0126.outfix.screens.menu.HamburgerMenuState.isOpen = true
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     AsyncImage(
@@ -440,7 +499,15 @@ fun HomeScreen() {
                                         modifier = Modifier.fillMaxSize().padding(8.dp)
                                     )
                                 }
+                                }
                             }
+                            
+                            com.pdm0126.outfix.ui.HorizontalEdgesProgressiveBlurLayer(
+                                modifier = Modifier.matchParentSize(),
+                                contentLayer = lentScrollLayer,
+                                maxBlur = 30f,
+                                edgeWidthFraction = if (currentWidthPx > 0) with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.toPx() } / currentWidthPx else 0.1f
+                            )
                         }
                     }
                 }

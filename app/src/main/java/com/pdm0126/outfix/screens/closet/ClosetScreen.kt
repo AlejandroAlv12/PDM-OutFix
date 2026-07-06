@@ -62,6 +62,8 @@ object ClosetOverlayState {
     var isHomeOverlayActive by androidx.compose.runtime.mutableStateOf(false)
     var homeOverlayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     var homeDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.model.DayInfo?>(null)
+    
+    var isFabVisible by androidx.compose.runtime.mutableStateOf(true)
 }
 
 @Composable

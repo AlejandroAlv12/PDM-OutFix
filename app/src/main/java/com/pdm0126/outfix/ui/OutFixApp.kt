@@ -374,7 +374,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             )
 
             androidx.compose.animation.AnimatedVisibility(
-                visible = isHome || isFabExpanded,
+                visible = (isHome && com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible) || isFabExpanded,
                 enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
                         androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
                 exit = androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutLinearInEasing)) + 
