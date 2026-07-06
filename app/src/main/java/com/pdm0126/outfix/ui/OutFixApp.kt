@@ -188,9 +188,18 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         isHamburgerOpen -> 20f
         else -> 0f
     }
-    val blurDuration = when {
-        showAuthModal -> 800
-        showLogoutDialog -> 300
+    var lastActiveOverlay by remember { mutableStateOf("none") }
+    LaunchedEffect(showAuthModal, showLogoutDialog, isHamburgerOpen, isOverlayActive, isDayOverlayActive, isHomeOverlayActive) {
+        if (showAuthModal) lastActiveOverlay = "auth"
+        else if (isHamburgerOpen) lastActiveOverlay = "hamburger"
+        else if (showLogoutDialog) lastActiveOverlay = "logout"
+        else if (isOverlayActive || isDayOverlayActive || isHomeOverlayActive) lastActiveOverlay = "overlay"
+    }
+
+    val blurDuration = when (lastActiveOverlay) {
+        "auth", "hamburger" -> 600
+        "logout" -> 300
+        "overlay" -> 350
         else -> 300
     }
     val bgBlur by androidx.compose.animation.core.animateFloatAsState(

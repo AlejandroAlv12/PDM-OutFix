@@ -73,27 +73,31 @@ fun HamburgerMenuOverlay(
         }
     }
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val screenWidthPx = configuration.screenWidthDp * density
+    
     val transitionState = remember { MutableTransitionState(false) }
     transitionState.targetState = isOpen
     val transition = updateTransition(transitionState, label = "HamburgerMenuTransition")
     val containerOffsetX by transition.animateFloat(
         transitionSpec = { tween(600, easing = FastOutSlowInEasing) },
         label = "containerOffset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
 
     val titleOffsetY by transition.animateFloat(
         transitionSpec = { tween(600, delayMillis = if (targetState) 50 else 0, easing = FastOutSlowInEasing) },
         label = "titleOffset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
 
     val item1OffsetY by transition.animateFloat(
         transitionSpec = { tween(600, delayMillis = if (targetState) 25 else 25, easing = FastOutSlowInEasing) },
         label = "item1Offset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
     val item2OffsetY by transition.animateFloat(
         transitionSpec = { tween(600, delayMillis = if (targetState) 0 else 50, easing = FastOutSlowInEasing) },
         label = "item2Offset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
 
     if (!transitionState.currentState && !transitionState.targetState) return
     val isExpanded = menuState != MenuState.MENU

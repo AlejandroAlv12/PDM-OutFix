@@ -60,6 +60,9 @@ fun AuthModal(
     val isFlipped = flipRotation > 90f
     val displayIsLogin = !isFlipped
     
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidthPx = configuration.screenWidthDp * density
+    
     val transitionState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     transitionState.targetState = isVisible
     val transition = androidx.compose.animation.core.updateTransition(transitionState, label = "AuthModalTransition")
@@ -67,22 +70,22 @@ fun AuthModal(
     val containerOffsetX by transition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
         label = "containerOffset"
-    ) { if (it) 0f else 1000f }
+    ) { if (it) 0f else screenWidthPx }
     
     val logoOffsetY by transition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 50 else 0, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
         label = "logoOffset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
     
     val nameOffsetY by transition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 25 else 25, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
         label = "nameOffset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
     
     val sloganOffsetY by transition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(600, delayMillis = if (targetState) 0 else 50, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
         label = "sloganOffset"
-    ) { if (it) 0f else -1000f }
+    ) { if (it) 0f else -screenWidthPx }
     
     Column(
         modifier = Modifier
