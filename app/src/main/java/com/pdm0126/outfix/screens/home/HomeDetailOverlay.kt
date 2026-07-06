@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -19,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -50,6 +53,8 @@ fun HomeDetailOverlay(
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
         val activeDayInfo = dayInfo ?: return@AnimatedVisibility
+
+        var expandedGarment by remember { mutableStateOf<com.pdm0126.outfix.data.api.dto.GarmentResponse?>(null) }
 
         val transition = this.transition
 
@@ -204,21 +209,9 @@ fun HomeDetailOverlay(
             animationSpec = tween(350)
         )
 
-        val backgroundLayer = rememberGraphicsLayer()
-        var screenCoords: LayoutCoordinates? by remember { mutableStateOf(null) }
-
         Box(modifier = Modifier.fillMaxSize()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { screenCoords = it }
-                    .drawWithContent {
-                        backgroundLayer.record {
-                            appBackgroundLayer?.let { drawLayer(it) }
-                            this@drawWithContent.drawContent()
-                        }
-                        drawLayer(backgroundLayer)
-                    }
+                modifier = Modifier.fillMaxSize()
             ) {
                 Box(
                     modifier = Modifier
@@ -243,19 +236,29 @@ fun HomeDetailOverlay(
                             onClick = {}
                         )
                 ) {
+                    val scrollLayer = rememberGraphicsLayer()
+                    val blurHeight = 36.dp
+
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val topAreaHeight = (charLocalY + charH).coerceAtLeast(0.dp)
+                        val totalBlurAreaHeight = topAreaHeight + blurHeight
+                        val startFraction = if (totalBlurAreaHeight > 0.dp) (topAreaHeight / totalBlurAreaHeight) else 0f
                         
                         if (contentAlpha > 0f) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
                                     .graphicsLayer { alpha = contentAlpha }
+                                    .drawWithContent {
+                                        scrollLayer.record { this@drawWithContent.drawContent() }
+                                        clipRect(top = totalBlurAreaHeight.toPx()) {
+                                            drawLayer(scrollLayer)
+                                        }
+                                    }
+                                    .verticalScroll(rememberScrollState())
                                     .padding(horizontal = 24.dp)
                             ) {
-                                Spacer(modifier = Modifier.height(charLocalY + charH))
-                                
-                                Spacer(modifier = Modifier.height(20.dp))
+                                Spacer(modifier = Modifier.height(totalBlurAreaHeight))
                                 val slots = listOfNotNull(
                                     activeDayInfo.topGarment?.let { "Superior" to it },
                                     activeDayInfo.bottomGarment?.let { "Inferior" to it },
@@ -280,46 +283,97 @@ fun HomeDetailOverlay(
                                         )
                                     }
                                 } else {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    BoxWithConstraints(
+                                        modifier = Modifier.fillMaxWidth().animateContentSize(
+                                            animationSpec = tween(400, easing = FastOutSlowInEasing)
+                                        )
                                     ) {
-                                        slots.chunked(2).forEach { row ->
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                row.forEach { (label, garment) ->
+                                        val totalWidth = maxWidth
+                                        val itemSpacing = 10.dp
+                                        
+                                        data class SlotBounds(val x: androidx.compose.ui.unit.Dp, val y: androidx.compose.ui.unit.Dp, val w: androidx.compose.ui.unit.Dp, val h: androidx.compose.ui.unit.Dp)
+                                        
+                                        val slotBoundsList = remember(slots, expandedGarment, totalWidth) {
+                                            val bounds = mutableListOf<SlotBounds>()
+                                            var currentY = 0.dp
+                                            var currentX = 0.dp
+                                            var rowMaxH = 0.dp
+
+                                            for (i in slots.indices) {
+                                                val garment = slots[i].second
+                                                val isExpanded = expandedGarment?.id == garment.id
+                                                
+                                                val w = if (isExpanded) totalWidth else (totalWidth - itemSpacing) / 2f
+                                                val h = w + 28.dp 
+
+                                                if (currentX + w > totalWidth + 1.dp) { 
+                                                    currentX = 0.dp
+                                                    currentY += rowMaxH + itemSpacing
+                                                    rowMaxH = 0.dp
+                                                }
+
+                                                bounds.add(SlotBounds(currentX, currentY, w, h))
+
+                                                currentX += w + itemSpacing
+                                                rowMaxH = maxOf(rowMaxH, h)
+                                            }
+                                            bounds
+                                        }
+
+                                        val totalHeight = if (slotBoundsList.isEmpty()) 0.dp else slotBoundsList.maxOf { it.y + it.h }
+
+                                        Box(modifier = Modifier.fillMaxWidth().height(totalHeight)) {
+                                            slots.forEachIndexed { index, (label, garment) ->
+                                                val isExpanded = expandedGarment?.id == garment.id
+                                                val targetBounds = slotBoundsList[index]
+
+                                                val animX by androidx.compose.animation.core.animateDpAsState(targetValue = targetBounds.x, animationSpec = tween(400, easing = FastOutSlowInEasing), label = "x")
+                                                val animY by androidx.compose.animation.core.animateDpAsState(targetValue = targetBounds.y, animationSpec = tween(400, easing = FastOutSlowInEasing), label = "y")
+                                                val animW by androidx.compose.animation.core.animateDpAsState(targetValue = targetBounds.w, animationSpec = tween(400, easing = FastOutSlowInEasing), label = "w")
+
+                                                val animFontSize by androidx.compose.animation.core.animateFloatAsState(targetValue = if (isExpanded) 13f else 11f, animationSpec = tween(400, easing = FastOutSlowInEasing), label = "font")
+                                                val animImagePadding by androidx.compose.animation.core.animateDpAsState(targetValue = if (isExpanded) 16.dp else 8.dp, animationSpec = tween(400, easing = FastOutSlowInEasing), label = "pad")
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .offset(x = animX, y = animY)
+                                                        .width(animW)
+                                                ) {
                                                     Column(
-                                                        modifier = Modifier.weight(1f),
+                                                        modifier = Modifier.fillMaxWidth(),
                                                         horizontalAlignment = Alignment.CenterHorizontally
                                                     ) {
                                                         Box(
                                                             modifier = Modifier
                                                                 .fillMaxWidth()
                                                                 .aspectRatio(1f)
-                                                            .clip(RoundedCornerShape(16.dp))
-                                                            .background(Color(0xFFF6EEE6))
-                                                            .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+                                                                .clip(RoundedCornerShape(16.dp))
+                                                                .background(Color(0xFFF6EEE6))
+                                                                .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                                                                .clickable(
+                                                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                                                    indication = null
+                                                                ) {
+                                                                    expandedGarment = if (isExpanded) null else garment
+                                                                },
                                                             contentAlignment = Alignment.Center
                                                         ) {
                                                             AsyncImage(
                                                                 model = garment.imageUrl,
                                                                 contentDescription = garment.name,
                                                                 contentScale = ContentScale.Fit,
-                                                                modifier = Modifier.fillMaxSize().padding(8.dp)
+                                                                modifier = Modifier.fillMaxSize().padding(animImagePadding)
                                                             )
                                                         }
                                                         Spacer(modifier = Modifier.height(4.dp))
                                                         Text(
                                                             text = garment.name.take(18),
-                                                            fontSize = 11.sp,
+                                                            fontSize = animFontSize.sp,
                                                             color = Color.DarkGray,
                                                             fontWeight = FontWeight.Medium
                                                         )
                                                     }
                                                 }
-                                                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                                             }
                                         }
                                     }
@@ -328,6 +382,41 @@ fun HomeDetailOverlay(
                             }
                         }
                         
+                        // 1. Progressive Blur
+                        if (android.os.Build.VERSION.SDK_INT >= 31 && contentAlpha > 0f) {
+                            com.pdm0126.outfix.ui.ProgressiveBlurLayer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(totalBlurAreaHeight)
+                                    .clipToBounds(),
+                                contentLayer = scrollLayer,
+                                maxBlur = 60f,
+                                fadeStartFraction = startFraction,
+                                fadeEndFraction = 1f
+                            )
+                        }
+
+                        // 2. White to Transparent gradient exactly at the gap
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = topAreaHeight)
+                                .height(blurHeight)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color.White, Color.White.copy(alpha = 0f))
+                                    )
+                                )
+                        )
+
+                        // 3. Solid White Mask over the top area
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(topAreaHeight)
+                                .background(Color.White)
+                        )
+
                         Box(
                             modifier = Modifier
                                 .offset(x = charLocalX.coerceAtLeast(0.dp), y = charLocalY.coerceAtLeast(0.dp))
