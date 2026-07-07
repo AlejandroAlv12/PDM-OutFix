@@ -296,7 +296,7 @@ fun HomeDetailOverlay(
                                             animationSpec = tween(400, easing = FastOutSlowInEasing)
                                         )
                                     ) {
-                                        val totalWidth = maxWidth
+                                        val totalWidth = finalW - 48.dp
                                         val itemSpacing = 10.dp
                                         
                                         data class SlotBounds(val x: androidx.compose.ui.unit.Dp, val y: androidx.compose.ui.unit.Dp, val w: androidx.compose.ui.unit.Dp, val h: androidx.compose.ui.unit.Dp)

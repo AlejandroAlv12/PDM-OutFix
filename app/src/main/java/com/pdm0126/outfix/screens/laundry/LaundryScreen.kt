@@ -1,4 +1,6 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package com.pdm0126.outfix.screens.laundry
+
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.pointer.pointerInput
@@ -26,9 +28,12 @@ import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.pdm0126.outfix.ui.bouncyClickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.draw.drawWithContent
@@ -116,7 +121,7 @@ fun LaundryScreen() {
                 contentPadding = PaddingValues(top = 96.dp, bottom = 120.dp, start = 24.dp, end = 24.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(displayItems) { (garment, isActual) ->
+                items(displayItems, key = { it.first.id }) { (garment, isActual) ->
                     LaundryItemCard(
                         garment = garment,
                         isActual = isActual,
@@ -224,9 +229,57 @@ fun LaundryItemCard(
     isConfirming: Boolean = false,
     onWashClick: () -> Unit
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var imageBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var buttonBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    
+    androidx.compose.runtime.LaunchedEffect(isActual) {
+        if (isActual) {
+            buttonBounds = null
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { coords ->
+                try { imageBounds = coords.boundsInRoot() } catch (e: Exception) {}
+            }
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+                onLongClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryGarment = garment
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryOverlayBounds = imageBounds
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryButtonBounds = buttonBounds
+                    
+                    val titleText = if (isActual) "Actual" else "Usada"
+                    val subText = if (isActual) {
+                        "Hoy"
+                    } else {
+                        val notes = garment.notes ?: ""
+                        if (notes.startsWith("USED:")) {
+                            try {
+                                val dateStr = notes.substringAfter("USED:")
+                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                val date = sdf.parse(dateStr)
+                                val displaySdf = java.text.SimpleDateFormat("dd 'de' MMMM", java.util.Locale("es", "ES"))
+                                "El " + displaySdf.format(date!!)
+                            } catch (e: Exception) {
+                                "Recientemente"
+                            }
+                        } else {
+                            "Recientemente"
+                        }
+                    }
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryTitleText = titleText
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundrySubtitleText = subText
+                    
+                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.isLaundryOverlayActive = true
+                }
+            )
             .clip(RoundedCornerShape(24.dp))
             .background(Color.White)
             .padding(16.dp)
@@ -303,6 +356,9 @@ fun LaundryItemCard(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(40.dp)
+                    .onGloballyPositioned { coords ->
+                        try { buttonBounds = coords.boundsInRoot() } catch(e: Exception) {}
+                    }
                     .bouncyClickable { onWashClick() }
                     .clip(CircleShape)
                     .background(animatedBgColor),

@@ -176,6 +176,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     val isOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive
     val isDayOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive
     val isHomeOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isHomeOverlayActive
+    val isLaundryOverlayActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isLaundryOverlayActive
 
     val isHamburgerOpen = HamburgerMenuState.isOpen
 
@@ -185,15 +186,16 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         isOverlayActive -> 20f
         isDayOverlayActive -> 20f
         isHomeOverlayActive -> 20f
+        isLaundryOverlayActive -> 20f
         isHamburgerOpen -> 20f
         else -> 0f
     }
     var lastActiveOverlay by remember { mutableStateOf("none") }
-    LaunchedEffect(showAuthModal, showLogoutDialog, isHamburgerOpen, isOverlayActive, isDayOverlayActive, isHomeOverlayActive) {
+    LaunchedEffect(showAuthModal, showLogoutDialog, isHamburgerOpen, isOverlayActive, isDayOverlayActive, isHomeOverlayActive, isLaundryOverlayActive) {
         if (showAuthModal) lastActiveOverlay = "auth"
         else if (isHamburgerOpen) lastActiveOverlay = "hamburger"
         else if (showLogoutDialog) lastActiveOverlay = "logout"
-        else if (isOverlayActive || isDayOverlayActive || isHomeOverlayActive) lastActiveOverlay = "overlay"
+        else if (isOverlayActive || isDayOverlayActive || isHomeOverlayActive || isLaundryOverlayActive) lastActiveOverlay = "overlay"
     }
 
     val blurDuration = when (lastActiveOverlay) {
@@ -208,7 +210,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
         label = "BgBlur"
     )
 
-    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive || isHomeOverlayActive || isHamburgerOpen
+    val isAppScaled = showAuthModal || showLogoutDialog || isOverlayActive || isDayOverlayActive || isHomeOverlayActive || isLaundryOverlayActive || isHamburgerOpen
 
     val authAlpha by authTransition.animateFloat(
         transitionSpec = { androidx.compose.animation.core.tween(800) },
@@ -590,6 +592,21 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             appBackgroundLayer = globalAppLayer,
             onDismiss = {
                 com.pdm0126.outfix.screens.closet.ClosetOverlayState.isHomeOverlayActive = false
+            }
+        )
+
+        com.pdm0126.outfix.screens.laundry.LaundryDetailOverlay(
+            garment = com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryGarment,
+            sourceBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryOverlayBounds,
+            appBackgroundLayer = globalAppLayer,
+            onDismiss = {
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isLaundryOverlayActive = false
+            },
+            onWash = { garmentId ->
+                overlayScope.launch {
+                    garmentRepository.markAsWashed(garmentId)
+                }
+                com.pdm0126.outfix.screens.closet.ClosetOverlayState.isLaundryOverlayActive = false
             }
         )
 

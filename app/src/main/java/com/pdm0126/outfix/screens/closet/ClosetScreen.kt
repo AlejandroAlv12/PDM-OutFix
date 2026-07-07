@@ -63,6 +63,13 @@ object ClosetOverlayState {
     var homeOverlayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     var homeDayInfo by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.model.DayInfo?>(null)
     
+    var isLaundryOverlayActive by androidx.compose.runtime.mutableStateOf(false)
+    var laundryOverlayBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    var laundryButtonBounds by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    var laundryGarment by androidx.compose.runtime.mutableStateOf<com.pdm0126.outfix.data.api.dto.GarmentResponse?>(null)
+    var laundryTitleText by androidx.compose.runtime.mutableStateOf("")
+    var laundrySubtitleText by androidx.compose.runtime.mutableStateOf("")
+    
     var isFabVisible by androidx.compose.runtime.mutableStateOf(true)
 }
 
@@ -161,11 +168,26 @@ fun ClosetScreen(viewModel: ClosetViewModel = androidx.lifecycle.viewmodel.compo
 
         val rootLayer = rememberGraphicsLayer()
         
-        val tops = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
-        val bottoms = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda", "Vestido") } }
-        val shoes = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
-        val headwear = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
-        val accessories = remember(garments) { garments.filter { it.status != "IN_WASH" && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
+        val plannedGarmentIds = remember(plannerDays, ClosetOverlayState.plannerEditDay) {
+            val plannerDay = ClosetOverlayState.plannerEditDay
+            plannerDays
+                .filter { it.day != plannerDay }
+                .flatMap { day ->
+                    listOfNotNull(
+                        day.topGarment?.id,
+                        day.bottomGarment?.id,
+                        day.shoesGarment?.id,
+                        day.hatGarment?.id
+                    ) + day.accessories.map { it.id }
+                }
+                .toSet()
+        }
+        
+        val tops = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
+        val bottoms = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") } }
+        val shoes = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
+        val headwear = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
+        val accessories = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
         
         Box(
             modifier = Modifier
