@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,6 +38,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +52,7 @@ import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.ui.CharacterWithClothes
 import com.pdm0126.outfix.screens.closet.parseColorHex
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -254,6 +260,18 @@ fun HomeScreen() {
                     }
                 }
                 
+                var isRandomPressedInstant by remember { mutableStateOf(false) }
+                val randomScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isRandomPressedInstant) 0.92f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = 400f
+                    ),
+                    label = "randomWidgetScale"
+                )
+                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -262,27 +280,70 @@ fun HomeScreen() {
                         modifier = Modifier
                             .weight(1f)
                             .height(140.dp)
+                            .graphicsLayer {
+                                scaleX = randomScale
+                                scaleY = randomScale
+                            }
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFFF6EEE6))
-                            .clickable {
-                                val availableTops = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") }
-                                val availableBottoms = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") }
-                                val availableShoes = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Zapatillas", "Botas", "Zapatos") }
-                                
-                                val randomTop = availableTops.randomOrNull()
-                                val randomBottom = if (randomTop?.category?.equals("Vestido", ignoreCase = true) == true) null else availableBottoms.randomOrNull()
-                                val randomShoes = availableShoes.randomOrNull()
-                                
-                                if (todayInfo != null) {
-                                    coroutineScope.launch {
-                                        repository.saveDayOutfit(
-                                            dayKey = todayInfo.day,
-                                            top = randomTop,
-                                            bottom = randomBottom,
-                                            shoes = randomShoes,
-                                            head = todayInfo.hatGarment,
-                                            accessories = todayInfo.accessories
-                                        )
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    isRandomPressedInstant = true
+                                    
+                                    val hapticJob = coroutineScope.launch {
+                                        var interval = 300L
+                                        while (isActive) {
+                                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                            kotlinx.coroutines.delay(interval)
+                                            interval = (interval * 0.75).toLong().coerceAtLeast(15L)
+                                        }
+                                    }
+                                    
+                                    var heldFor2Seconds = false
+                                    var wasCancelled = false
+                                    try {
+                                        withTimeout(1300L) {
+                                            val upEvent = waitForUpOrCancellation()
+                                            if (upEvent == null) {
+                                                wasCancelled = true
+                                            }
+                                        }
+                                    } catch (e: androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException) {
+                                        hapticJob.cancel()
+                                        isRandomPressedInstant = false
+                                        heldFor2Seconds = true
+                                        
+                                        val availableTops = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") }
+                                        val availableBottoms = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") }
+                                        val availableShoes = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Zapatillas", "Botas", "Zapatos") }
+                                        
+                                        val randomTop = availableTops.randomOrNull()
+                                        val randomBottom = if (randomTop?.category?.equals("Vestido", ignoreCase = true) == true) null else availableBottoms.randomOrNull()
+                                        val randomShoes = availableShoes.randomOrNull()
+                                        
+                                        if (todayInfo != null) {
+                                            coroutineScope.launch {
+                                                repository.saveDayOutfit(
+                                                    dayKey = todayInfo.day,
+                                                    top = randomTop,
+                                                    bottom = randomBottom,
+                                                    shoes = randomShoes,
+                                                    head = todayInfo.hatGarment,
+                                                    accessories = todayInfo.accessories
+                                                )
+                                            }
+                                        }
+                                        
+                                        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                        waitForUpOrCancellation()
+                                    }
+                                    
+                                    hapticJob.cancel()
+                                    isRandomPressedInstant = false
+                                    
+                                    if (!heldFor2Seconds && !wasCancelled) {
+                                        android.widget.Toast.makeText(context, "Mantén presionado para cambiar", android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
