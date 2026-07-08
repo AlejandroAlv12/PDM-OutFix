@@ -118,7 +118,6 @@ fun DayDetailOverlay(
             label = "contentAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
 
-        // Character Box Dimensions
         val charStartW = startW - 16.dp
         val charStartH = startH - 60.dp
         val charStartX = startX + 8.dp
@@ -148,7 +147,6 @@ fun DayDetailOverlay(
         val charLocalX = charAbsX - x
         val charLocalY = charAbsY - y
         
-        // Text Animation
         val textWidthEstimate = (activeDayInfo.day.length * 9).dp
         val textAbsStartX = startX + (startW / 2) - (textWidthEstimate / 2)
         val textAbsStartY = startY + 12.dp
@@ -185,7 +183,6 @@ fun DayDetailOverlay(
                         drawLayer(backgroundLayer)
                     }
             ) {
-                // Dim background — tapping it dismisses
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -197,7 +194,6 @@ fun DayDetailOverlay(
                         )
                 )
 
-                // Expanding card
                 Box(
                     modifier = Modifier
                         .offset(x = x, y = y)
@@ -356,7 +352,6 @@ fun DayDetailOverlay(
                             }
                         }
                         
-                        // 1. Progressive Blur
                         if (android.os.Build.VERSION.SDK_INT >= 31 && contentAlpha > 0f) {
                             com.pdm0126.outfix.ui.ProgressiveBlurLayer(
                                 modifier = Modifier
@@ -364,13 +359,12 @@ fun DayDetailOverlay(
                                     .height(totalBlurAreaHeight)
                                     .clipToBounds(),
                                 contentLayer = scrollLayer,
-                                maxBlur = 60f,
+                                maxBlur = 0f,
                                 fadeStartFraction = startFraction,
                                 fadeEndFraction = 1f
                             )
                         }
 
-                        // 2. White to Transparent gradient exactly at the gap
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -383,7 +377,6 @@ fun DayDetailOverlay(
                                 )
                         )
 
-                        // 3. Solid White Mask over the top area
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -391,7 +384,6 @@ fun DayDetailOverlay(
                                 .background(Color.White)
                         )
 
-                        // Character Preview
                         Box(
                             modifier = Modifier
                                 .offset(x = charLocalX.coerceAtLeast(0.dp), y = charLocalY.coerceAtLeast(0.dp))
@@ -409,7 +401,6 @@ fun DayDetailOverlay(
                             )
                         }
                         
-                        // Subtitle & Edit Button (Fade in only)
                         if (contentAlpha > 0f) {
                             val isEmpty = activeDayInfo.topGarment == null &&
                                     activeDayInfo.bottomGarment == null &&
@@ -446,7 +437,6 @@ fun DayDetailOverlay(
                             }
                         }
                         
-                        // Day Title Text (Animates from small & centered-ish to big & left)
                         Text(
                             text = activeDayInfo.day,
                             fontWeight = FontWeight.Bold,

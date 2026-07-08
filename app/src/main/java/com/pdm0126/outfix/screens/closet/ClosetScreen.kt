@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.launch
@@ -27,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
-import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.ui.theme.LimeGreen
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -142,6 +142,11 @@ fun ClosetScreen(
         val headwear = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
         val accessories = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
         
+        val scrollState = rememberScrollState()
+        val shouldShowBlur by remember {
+            derivedStateOf { scrollState.value > 0 }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -165,9 +170,13 @@ fun ClosetScreen(
                                 drawRect(Color(0xFFEDDDCC))
                                 this@drawWithContent.drawContent()
                             }
-                            drawLayer(slidersLayer)
+                            val topAreaHeight = 306.dp
+                            val blurHeight = 30.dp
+                            clipRect(top = (topAreaHeight + blurHeight).toPx()) {
+                                drawLayer(slidersLayer)
+                            }
                         }
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                 ) {
                 Spacer(modifier = Modifier.height(402.dp))
 
@@ -262,18 +271,41 @@ fun ClosetScreen(
                 Spacer(modifier = Modifier.height(120.dp))
             }
 
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val topAreaHeight = 306.dp
+            val blurHeight = 30.dp
+            val totalBlurAreaHeight = topAreaHeight + blurHeight
+
+            if (shouldShowBlur && android.os.Build.VERSION.SDK_INT >= 31) {
                 com.pdm0126.outfix.ui.ProgressiveBlurLayer(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(380.dp)
+                        .height(totalBlurAreaHeight)
                         .clipToBounds(),
                     contentLayer = slidersLayer,
-                    maxBlur = 60f,
-                    fadeStartFraction = 0.4f,
+                    maxBlur = 0f,
+                    fadeStartFraction = topAreaHeight / totalBlurAreaHeight,
                     fadeEndFraction = 1.0f
                 )
             }
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = topAreaHeight)
+                    .height(blurHeight)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(Color(0xFFEDDDCC), Color(0xFFEDDDCC).copy(alpha = 0f))
+                        )
+                    )
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(topAreaHeight)
+                    .background(Color(0xFFEDDDCC))
+            )
 
             Column(
                 modifier = Modifier

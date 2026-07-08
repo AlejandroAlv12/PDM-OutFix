@@ -391,7 +391,6 @@ fun HomeDetailOverlay(
                             }
                         }
                         
-                        // 1. Progressive Blur
                         if (android.os.Build.VERSION.SDK_INT >= 31 && contentAlpha > 0f) {
                             com.pdm0126.outfix.ui.ProgressiveBlurLayer(
                                 modifier = Modifier
@@ -399,13 +398,12 @@ fun HomeDetailOverlay(
                                     .height(totalBlurAreaHeight)
                                     .clipToBounds(),
                                 contentLayer = scrollLayer,
-                                maxBlur = 60f,
+                                maxBlur = 0f,
                                 fadeStartFraction = startFraction,
                                 fadeEndFraction = 1f
                             )
                         }
 
-                        // 2. White to Transparent gradient exactly at the gap
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -418,7 +416,6 @@ fun HomeDetailOverlay(
                                 )
                         )
 
-                        // 3. Solid White Mask over the top area
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
