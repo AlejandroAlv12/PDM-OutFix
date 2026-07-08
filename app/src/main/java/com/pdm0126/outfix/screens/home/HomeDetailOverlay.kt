@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,12 +46,15 @@ fun HomeDetailOverlay(
     isActive: Boolean,
     dayInfo: DayInfo?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
+    hoyBounds: androidx.compose.ui.geometry.Rect? = null,
+    charBounds: androidx.compose.ui.geometry.Rect? = null,
+    styleBounds: androidx.compose.ui.geometry.Rect? = null,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
     onDismiss: () -> Unit
 ) {
     AnimatedVisibility(
         visible = isActive,
-        enter = fadeIn(animationSpec = tween(durationMillis = 1)),
+        enter = fadeIn(animationSpec = tween(durationMillis = 150, easing = LinearEasing)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
         val activeDayInfo = dayInfo ?: return@AnimatedVisibility
@@ -82,6 +86,13 @@ fun HomeDetailOverlay(
 
         val transitionSpec = { tween<androidx.compose.ui.unit.Dp>(durationMillis = 350, easing = FastOutSlowInEasing) }
 
+        val textScale by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "textScale") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else (22f / 34f)
+        }
+        
+        val styleScale by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "styleScale") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else (14f / 18f)
+        }
         val x by transition.animateDp(transitionSpec = { transitionSpec() }, label = "x") {
             if (it == androidx.compose.animation.EnterExitState.Visible) finalX else startX
         }
@@ -95,11 +106,11 @@ fun HomeDetailOverlay(
             if (it == androidx.compose.animation.EnterExitState.Visible) finalH else startH
         }
         val radius by transition.animateDp(transitionSpec = { transitionSpec() }, label = "radius") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 24.dp else 16.dp
+            if (it == androidx.compose.animation.EnterExitState.Visible) 24.dp else 20.dp
         }
         
         val cardColor by androidx.compose.animation.animateColorAsState(
-            targetValue = if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) Color.White else Color(0xFFF6EEE6),
+            targetValue = Color(0xFFF6EEE6),
             animationSpec = tween(300)
         )
 
@@ -108,20 +119,22 @@ fun HomeDetailOverlay(
             label = "bgAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 0.4f else 0f }
 
+        val dummyW = (startW - 180.dp).coerceAtLeast(0.dp)
+        val dummyH = (startH - 20.dp).coerceAtLeast(0.dp)
+        
+        val slidingBoxX by transition.animateDp(
+            transitionSpec = { tween(350, easing = FastOutSlowInEasing) },
+            label = "slidingBoxX"
+        ) { if (it == androidx.compose.animation.EnterExitState.Visible) -(dummyW + 20.dp) else 10.dp }
+
         val contentAlpha by transition.animateFloat(
-            transitionSpec = { 
-                if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) {
-                    tween(300, delayMillis = 100)
-                } else {
-                    tween(100)
-                }
-            },
+            transitionSpec = { tween(350, easing = FastOutSlowInEasing) },
             label = "contentAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
-        val charStartW = 150.dp
-        val charStartH = 250.dp
-        val charStartX = startX + startW - 160.dp
-        val charStartY = startY + 38.dp
+        val charStartW = with(density) { (charBounds?.width ?: 150f).toDp() }
+        val charStartH = with(density) { (charBounds?.height ?: 254f).toDp() }
+        val charStartX = with(density) { (charBounds?.left ?: (sourceBounds?.left ?: 0f) + (sourceBounds?.width ?: 0f) - 160f).toDp() }
+        val charStartY = with(density) { (charBounds?.top ?: (sourceBounds?.top ?: 0f) + 38f).toDp() }
         
         val charFinalW = finalW - 48.dp
         val charFinalH = 220.dp
@@ -151,25 +164,20 @@ fun HomeDetailOverlay(
             if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 1f
         }
         
-        val hoyWidthEstimate = 45.dp
-        val textAbsStartX = startX + startW - 85.dp - (hoyWidthEstimate / 2)
-        val textAbsStartY = startY + 10.dp
-        val textAbsFinalX = finalX + 24.dp
-        val textAbsFinalY = finalY + 24.dp
+        val textAbsStartX = with(density) { (hoyBounds?.left ?: (sourceBounds?.left ?: 0f) + (sourceBounds?.width ?: 0f) - 85f - 20f).toDp() }
+        val textAbsStartY = with(density) { (hoyBounds?.top ?: (sourceBounds?.top ?: 0f) + 10f).toDp() }
+        val textFinalX = finalX + 32.dp
+        val textFinalY = finalY + 24.dp
         
         val textAbsX by transition.animateDp(transitionSpec = { transitionSpec() }, label = "textX") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) textAbsFinalX else textAbsStartX
+            if (it == androidx.compose.animation.EnterExitState.Visible) textFinalX else textAbsStartX
         }
         val textAbsY by transition.animateDp(transitionSpec = { transitionSpec() }, label = "textY") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) textAbsFinalY else textAbsStartY
+            if (it == androidx.compose.animation.EnterExitState.Visible) textFinalY else textAbsStartY
         }
         val textLocalX = textAbsX - x
         val textLocalY = textAbsY - y
         
-        val textSize by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "textSize") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 26f else 24f
-        }
-
         val allGarments = listOfNotNull(
             activeDayInfo.topGarment,
             activeDayInfo.bottomGarment,
@@ -193,25 +201,19 @@ fun HomeDetailOverlay(
             }
         }.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
-        val styleWidthEstimate = (styleString.length * 8).dp
-        val styleAbsStartX = startX + startW - 85.dp - (styleWidthEstimate / 2)
-        val styleAbsStartY = startY + startH - 28.dp
-        
-        val styleAbsFinalX = finalX + 24.dp
-        val styleAbsFinalY = finalY + 54.dp
+        val styleAbsStartX = with(density) { (styleBounds?.left ?: (sourceBounds?.left ?: 0f) + (sourceBounds?.width ?: 0f) - 85f - 30f).toDp() }
+        val styleAbsStartY = with(density) { (styleBounds?.top ?: (sourceBounds?.top ?: 0f) + (sourceBounds?.height ?: 0f) - 28f).toDp() }
+        val styleFinalX = finalX + 32.dp
+        val styleFinalY = textFinalY + 40.dp
         
         val styleAbsX by transition.animateDp(transitionSpec = { transitionSpec() }, label = "styleX") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) styleAbsFinalX else styleAbsStartX
+            if (it == androidx.compose.animation.EnterExitState.Visible) styleFinalX else styleAbsStartX
         }
         val styleAbsY by transition.animateDp(transitionSpec = { transitionSpec() }, label = "styleY") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) styleAbsFinalY else styleAbsStartY
+            if (it == androidx.compose.animation.EnterExitState.Visible) styleFinalY else styleAbsStartY
         }
         val styleLocalX = styleAbsX - x
         val styleLocalY = styleAbsY - y
-        
-        val styleSize by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "styleSize") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 13f else 16f
-        }
         
         val styleColor by androidx.compose.animation.animateColorAsState(
             targetValue = if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) Color.Gray else Color.Black,
@@ -245,7 +247,9 @@ fun HomeDetailOverlay(
                             onClick = {}
                         )
                 ) {
+
                     val scrollLayer = rememberGraphicsLayer()
+                    val scrollState = rememberScrollState()
                     val blurHeight = 36.dp
 
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -264,7 +268,7 @@ fun HomeDetailOverlay(
                                             drawLayer(scrollLayer)
                                         }
                                     }
-                                    .verticalScroll(rememberScrollState())
+                                    .verticalScroll(scrollState)
                                     .padding(horizontal = 24.dp)
                             ) {
                                 Spacer(modifier = Modifier.height(totalBlurAreaHeight))
@@ -281,7 +285,7 @@ fun HomeDetailOverlay(
                                             .fillMaxWidth()
                                             .height(100.dp)
                                             .clip(RoundedCornerShape(16.dp))
-                                            .background(Color(0xFFF6EEE6))
+                                            .background(Color.White)
                                             .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -331,6 +335,20 @@ fun HomeDetailOverlay(
 
                                         val totalHeight = if (slotBoundsList.isEmpty()) 0.dp else slotBoundsList.maxOf { it.y + it.h }
 
+                                        LaunchedEffect(expandedGarment) {
+                                            if (expandedGarment != null) {
+                                                val index = slots.indexOfFirst { it.second.id == expandedGarment?.id }
+                                                if (index >= 0) {
+                                                    val bounds = slotBoundsList[index]
+                                                    val visibleH = finalH - totalBlurAreaHeight
+                                                    val targetScrollY = bounds.y + (bounds.h / 2) - (visibleH / 2)
+                                                    
+                                                    val targetPx = with(density) { targetScrollY.toPx().toInt().coerceAtLeast(0) }
+                                                    scrollState.animateScrollTo(targetPx, animationSpec = tween(400, easing = FastOutSlowInEasing))
+                                                }
+                                            }
+                                        }
+
                                         Box(modifier = Modifier.fillMaxWidth().height(totalHeight)) {
                                             slots.forEachIndexed { index, (label, garment) ->
                                                 val isExpanded = expandedGarment?.id == garment.id
@@ -357,7 +375,7 @@ fun HomeDetailOverlay(
                                                                 .fillMaxWidth()
                                                                 .aspectRatio(1f)
                                                                 .clip(RoundedCornerShape(16.dp))
-                                                                .background(Color(0xFFF6EEE6))
+                                                                .background(Color.White)
                                                                 .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                                                                 .clickable(
                                                                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
@@ -411,7 +429,7 @@ fun HomeDetailOverlay(
                                 .height(blurHeight)
                                 .background(
                                     androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        colors = listOf(Color.White, Color.White.copy(alpha = 0f))
+                                        colors = listOf(Color(0xFFF6EEE6), Color(0xFFF6EEE6).copy(alpha = 0f))
                                     )
                                 )
                         )
@@ -420,8 +438,42 @@ fun HomeDetailOverlay(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(topAreaHeight)
-                                .background(Color.White)
+                                .background(Color(0xFFF6EEE6))
                         )
+
+                    Box(
+                        modifier = Modifier
+                            .offset(x = slidingBoxX, y = 10.dp)
+                            .size(width = dummyW, height = dummyH)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    ) {
+                        val headCategories = remember { listOf("Gafas", "Joyería") }
+                        val topCategories = remember { listOf("Bufanda", "Corbata") }
+                        val bottomCategories = remember { listOf("Reloj", "Cinturón") }
+                        val shoesCategories = remember { listOf("Bolso", "Mochila", "Otro") }
+
+                        val headAccs = remember(activeDayInfo.accessories) { activeDayInfo.accessories.filter { it.category in headCategories } }
+                        val topAccs = remember(activeDayInfo.accessories) { activeDayInfo.accessories.filter { it.category in topCategories } }
+                        val bottomAccs = remember(activeDayInfo.accessories) { activeDayInfo.accessories.filter { it.category in bottomCategories } }
+                        val shoesAccs = remember(activeDayInfo.accessories) { activeDayInfo.accessories.filter { it.category in shoesCategories } }
+
+                        val isDress = activeDayInfo.topGarment?.category?.equals("Vestido", ignoreCase = true) == true
+
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            com.pdm0126.outfix.screens.closet.SlotWithAccessories("Cabeza", activeDayInfo.hatGarment, headAccs, Modifier.weight(1f))
+
+                            if (isDress) {
+                                com.pdm0126.outfix.screens.closet.SlotWithAccessories("Vestido", activeDayInfo.topGarment, topAccs, Modifier.weight(3f))
+                            } else {
+                                com.pdm0126.outfix.screens.closet.SlotWithAccessories("Superior", activeDayInfo.topGarment, topAccs, Modifier.weight(2f))
+                                com.pdm0126.outfix.screens.closet.SlotWithAccessories("Inferior", activeDayInfo.bottomGarment, bottomAccs, Modifier.weight(2f))
+                            }
+                            com.pdm0126.outfix.screens.closet.SlotWithAccessories("Calzado", activeDayInfo.shoesGarment, shoesAccs, Modifier.weight(1.5f))
+                        }
+                    }
+
 
                         Box(
                             modifier = Modifier
@@ -449,19 +501,31 @@ fun HomeDetailOverlay(
                         Text(
                             text = "Hoy",
                             fontWeight = FontWeight.Bold,
-                            fontSize = textSize.sp,
+                            fontSize = 34.sp,
                             fontFamily = FontFamily.Serif,
                             color = Color.Black,
-                            modifier = Modifier.offset(x = textLocalX, y = textLocalY)
+                            modifier = Modifier
+                                .offset(x = textLocalX, y = textLocalY)
+                                .graphicsLayer {
+                                    scaleX = textScale
+                                    scaleY = textScale
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                                }
                         )
                         
                         Text(
                             text = styleString,
-                            fontSize = styleSize.sp,
-                            fontWeight = if (styleSize > 14f) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
                             fontFamily = FontFamily.Serif,
-                            color = styleColor,
-                            modifier = Modifier.offset(x = styleLocalX, y = styleLocalY)
+                            color = Color.Black,
+                            modifier = Modifier
+                                .offset(x = styleLocalX, y = styleLocalY)
+                                .graphicsLayer {
+                                    scaleX = styleScale
+                                    scaleY = styleScale
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                                }
                         )
                     }
                 }

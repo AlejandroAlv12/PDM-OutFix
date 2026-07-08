@@ -116,6 +116,21 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val haptic = LocalHapticFeedback.current
+
+                val widgetAlpha by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (appState.isHomeOverlayActive) 0f else 1f,
+                    animationSpec = if (appState.isHomeOverlayActive) {
+                        androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearEasing)
+                    } else {
+                        androidx.compose.animation.core.tween(durationMillis = 1, delayMillis = 350)
+                    },
+                    label = "widgetAlpha"
+                )
+
+                var hoyBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+                var charBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+                var styleBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -125,7 +140,10 @@ fun HomeScreen(
                         }
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFFF6EEE6))
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
                             val topOffsetPx = with(density) { 24.dp.toPx() }
                             if (scrollState.value > topOffsetPx) return@clickable
                             
@@ -143,9 +161,15 @@ fun HomeScreen(
                                 hatGarment = todayInfo?.hatGarment,
                                 accessories = todayInfo?.accessories ?: emptyList()
                             )
-                            appViewModel.showHomeOverlay(info, appState.homeOverlayBounds)
+                            appViewModel.showHomeOverlay(
+                                info, 
+                                appState.homeOverlayBounds,
+                                hoyBounds,
+                                charBounds,
+                                styleBounds
+                            )
                         }
-                        .graphicsLayer { alpha = if (appState.isHomeOverlayActive) 0f else 1f }
+                        .graphicsLayer { alpha = widgetAlpha }
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -194,10 +218,20 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 22.sp,
                             color = Color.Black,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                            modifier = Modifier.onGloballyPositioned { coords ->
+                                try { hoyBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                            }
                         )
                         
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coords ->
+                                    try { charBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                                }
+                        ) {
                             CharacterWithClothes(
                                 top = todayInfo?.topGarment,
                                 bottom = todayInfo?.bottomGarment,
@@ -236,7 +270,10 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = Color.Black,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                            modifier = Modifier.onGloballyPositioned { coords ->
+                                try { styleBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                            }
                         )
                     }
                 }

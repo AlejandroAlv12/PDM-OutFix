@@ -106,8 +106,8 @@ fun WeeklyPlannerScreen(
                         appViewModel.navigateTo(OutFixScreen.Closet)
                         editingDay = null
                     },
-                    onLongClick = { bounds ->
-                        appViewModel.showDayDetail(d, bounds)
+                    onLongClick = { bounds, textBounds, charBounds ->
+                        appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                         editingDay = null
                     }
                 )
@@ -140,8 +140,8 @@ fun WeeklyPlannerScreen(
                         appViewModel.navigateTo(OutFixScreen.Closet)
                         editingDay = null
                     },
-                    onLongClick = { bounds ->
-                        appViewModel.showDayDetail(d, bounds)
+                    onLongClick = { bounds, textBounds, charBounds ->
+                        appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                         editingDay = null
                     }
                 )
@@ -174,8 +174,8 @@ fun WeeklyPlannerScreen(
                     appViewModel.navigateTo(OutFixScreen.Closet)
                     editingDay = null
                 },
-                onLongClick = { bounds ->
-                    appViewModel.showDayDetail(d, bounds)
+                onLongClick = { bounds, textBounds, charBounds ->
+                    appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                     editingDay = null
                 }
             )
@@ -200,7 +200,7 @@ fun DayCard(
     isDetailActive: Boolean = false,
     onClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onLongClick: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null
+    onLongClick: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val cardLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
@@ -208,6 +208,8 @@ fun DayCard(
     var buttonCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
     var cardBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var textBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var charBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
     Box(
         modifier = modifier
@@ -220,7 +222,9 @@ fun DayCard(
                 onClick = { onClick() },
                 onLongClick = { 
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    cardBounds?.let { onLongClick?.invoke(it) }
+                    if (cardBounds != null && textBounds != null && charBounds != null) {
+                        onLongClick?.invoke(cardBounds!!, textBounds!!, charBounds!!)
+                    }
                 }
             )
             .onGloballyPositioned { coords ->
@@ -251,7 +255,10 @@ fun DayCard(
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             color = Color.Black,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            modifier = Modifier.onGloballyPositioned { coords ->
+                try { textBounds = coords.boundsInRoot() } catch (e: Exception) {}
+            }
         )
         Spacer(modifier = Modifier.height(8.dp))
         com.pdm0126.outfix.ui.CharacterWithClothes(
@@ -263,6 +270,9 @@ fun DayCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .onGloballyPositioned { coords ->
+                    try { charBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                }
         )
     }
     

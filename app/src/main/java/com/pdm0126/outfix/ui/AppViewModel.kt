@@ -26,9 +26,14 @@ data class AppUiState(
 
     val detailDayInfo: DayInfo? = null,
     val detailDayBounds: Rect? = null,
+    val detailDayTextBounds: Rect? = null,
+    val detailDayCharBounds: Rect? = null,
     val isDayOverlayActive: Boolean = false,
     val isHomeOverlayActive: Boolean = false,
     val homeOverlayBounds: Rect? = null,
+    val homeHoyBounds: Rect? = null,
+    val homeCharBounds: Rect? = null,
+    val homeStyleBounds: Rect? = null,
     val homeDayInfo: DayInfo? = null,
 
     val isLaundryOverlayActive: Boolean = false,
@@ -84,16 +89,31 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch { garmentRepository.markAsWashed(garmentId) }
     }
 
-    fun showDayDetail(dayInfo: DayInfo, bounds: Rect?) {
-        _uiState.update { it.copy(detailDayInfo = dayInfo, detailDayBounds = bounds, isDayOverlayActive = true) }
+    fun showDayDetail(dayInfo: DayInfo, bounds: Rect?, textBounds: Rect? = null, charBounds: Rect? = null) {
+        _uiState.update { it.copy(detailDayInfo = dayInfo, detailDayBounds = bounds, detailDayTextBounds = textBounds, detailDayCharBounds = charBounds, isDayOverlayActive = true) }
     }
 
     fun dismissDayOverlay() {
         _uiState.update { it.copy(isDayOverlayActive = false) }
     }
 
-    fun showHomeOverlay(dayInfo: DayInfo, bounds: Rect?) {
-        _uiState.update { it.copy(homeDayInfo = dayInfo, homeOverlayBounds = bounds, isHomeOverlayActive = true) }
+    fun showHomeOverlay(
+        dayInfo: DayInfo,
+        bounds: Rect?,
+        hoyBounds: Rect?,
+        charBounds: Rect?,
+        styleBounds: Rect?
+    ) {
+        _uiState.update {
+            it.copy(
+                homeDayInfo = dayInfo,
+                homeOverlayBounds = bounds,
+                homeHoyBounds = hoyBounds,
+                homeCharBounds = charBounds,
+                homeStyleBounds = styleBounds,
+                isHomeOverlayActive = true
+            )
+        }
     }
 
     fun dismissHomeOverlay() {

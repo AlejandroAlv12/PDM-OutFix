@@ -49,6 +49,8 @@ fun DayDetailOverlay(
     isActive: Boolean,
     dayInfo: DayInfo?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
+    textBounds: androidx.compose.ui.geometry.Rect? = null,
+    charBounds: androidx.compose.ui.geometry.Rect? = null,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
     onDismiss: () -> Unit,
     onEditDay: (String) -> Unit
@@ -70,7 +72,7 @@ fun DayDetailOverlay(
         val density = androidx.compose.ui.platform.LocalDensity.current
 
         val startW = with(density) { (sourceBounds?.width ?: 120f).toDp() }
-        val startH = with(density) { (sourceBounds?.height ?: 200f).toDp() }
+        val startH = with(density) { (sourceBounds?.height ?: 300f).toDp() }
         val startX = with(density) { (sourceBounds?.left ?: 0f).toDp() }
         val startY = with(density) { (sourceBounds?.top ?: 0f).toDp() }
 
@@ -98,7 +100,7 @@ fun DayDetailOverlay(
         }
         
         val cardColor by androidx.compose.animation.animateColorAsState(
-            targetValue = if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) Color.White else Color(0xFFF6EEE6),
+            targetValue = if (transition.targetState == androidx.compose.animation.EnterExitState.Visible) Color(0xFFF6EEE6) else Color(0xFFF6EEE6),
             animationSpec = tween(300)
         )
 
@@ -118,10 +120,10 @@ fun DayDetailOverlay(
             label = "contentAlpha"
         ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
 
-        val charStartW = startW - 16.dp
-        val charStartH = startH - 60.dp
-        val charStartX = startX + 8.dp
-        val charStartY = startY + 48.dp
+        val charStartW = with(density) { (charBounds?.width ?: (startW - 16.dp).value).toDp() }
+        val charStartH = with(density) { (charBounds?.height ?: (startH - 60.dp).value).toDp() }
+        val charStartX = with(density) { (charBounds?.left ?: (startX + 8.dp).value).toDp() }
+        val charStartY = with(density) { (charBounds?.top ?: (startY + 48.dp).value).toDp() }
         
         val charFinalW = finalW - 48.dp
         val charFinalH = 220.dp
@@ -147,9 +149,8 @@ fun DayDetailOverlay(
         val charLocalX = charAbsX - x
         val charLocalY = charAbsY - y
         
-        val textWidthEstimate = (activeDayInfo.day.length * 9).dp
-        val textAbsStartX = startX + (startW / 2) - (textWidthEstimate / 2)
-        val textAbsStartY = startY + 12.dp
+        val textAbsStartX = with(density) { (textBounds?.left ?: (startX + (startW / 2) - 30.dp).value).toDp() }
+        val textAbsStartY = with(density) { (textBounds?.top ?: (startY + 12.dp).value).toDp() }
         val textAbsFinalX = finalX + 24.dp
         val textAbsFinalY = finalY + 24.dp
         
@@ -162,8 +163,8 @@ fun DayDetailOverlay(
         val textLocalX = textAbsX - x
         val textLocalY = textAbsY - y
         
-        val textSize by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "textSize") {
-            if (it == androidx.compose.animation.EnterExitState.Visible) 26f else 18f
+        val textScale by transition.animateFloat(transitionSpec = { tween(350, easing = FastOutSlowInEasing) }, label = "textScale") {
+            if (it == androidx.compose.animation.EnterExitState.Visible) 1f else (15f / 26f)
         }
 
         val backgroundLayer = rememberGraphicsLayer()
@@ -207,6 +208,7 @@ fun DayDetailOverlay(
                         )
                 ) {
                     val scrollLayer = rememberGraphicsLayer()
+                    val scrollState = rememberScrollState()
                     val blurHeight = 36.dp
 
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -225,7 +227,7 @@ fun DayDetailOverlay(
                                             drawLayer(scrollLayer)
                                         }
                                     }
-                                    .verticalScroll(rememberScrollState())
+                                    .verticalScroll(scrollState)
                                     .padding(horizontal = 24.dp)
                             ) {
                                 Spacer(modifier = Modifier.height(totalBlurAreaHeight))
@@ -292,6 +294,20 @@ fun DayDetailOverlay(
 
                                         val totalHeight = if (slotBoundsList.isEmpty()) 0.dp else slotBoundsList.maxOf { it.y + it.h }
 
+                                        LaunchedEffect(expandedGarment) {
+                                            if (expandedGarment != null) {
+                                                val index = slots.indexOfFirst { it.second.id == expandedGarment?.id }
+                                                if (index >= 0) {
+                                                    val bounds = slotBoundsList[index]
+                                                    val visibleH = finalH - totalBlurAreaHeight
+                                                    val targetScrollY = bounds.y + (bounds.h / 2) - (visibleH / 2)
+                                                    
+                                                    val targetPx = with(density) { targetScrollY.toPx().toInt().coerceAtLeast(0) }
+                                                    scrollState.animateScrollTo(targetPx, animationSpec = tween(400, easing = FastOutSlowInEasing))
+                                                }
+                                            }
+                                        }
+
                                         Box(modifier = Modifier.fillMaxWidth().height(totalHeight)) {
                                             slots.forEachIndexed { index, (label, garment) ->
                                                 val isExpanded = expandedGarment?.id == garment.id
@@ -318,7 +334,7 @@ fun DayDetailOverlay(
                                                                 .fillMaxWidth()
                                                                 .aspectRatio(1f)
                                                                 .clip(RoundedCornerShape(16.dp))
-                                                                .background(Color(0xFFF6EEE6))
+                                                                .background(Color.White)
                                                                 .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                                                                 .clickable(
                                                                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
@@ -372,7 +388,7 @@ fun DayDetailOverlay(
                                 .height(blurHeight)
                                 .background(
                                     androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        colors = listOf(Color.White, Color.White.copy(alpha = 0f))
+                                        colors = listOf(Color(0xFFF6EEE6), Color(0xFFF6EEE6).copy(alpha = 0f))
                                     )
                                 )
                         )
@@ -381,7 +397,7 @@ fun DayDetailOverlay(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(topAreaHeight)
-                                .background(Color.White)
+                                .background(Color(0xFFF6EEE6))
                         )
 
                         Box(
@@ -440,10 +456,16 @@ fun DayDetailOverlay(
                         Text(
                             text = activeDayInfo.day,
                             fontWeight = FontWeight.Bold,
-                            fontSize = textSize.sp,
+                            fontSize = 26.sp,
                             fontFamily = FontFamily.Serif,
                             color = Color.Black,
-                            modifier = Modifier.offset(x = textLocalX, y = textLocalY)
+                            modifier = Modifier
+                                .offset(x = textLocalX, y = textLocalY)
+                                .graphicsLayer {
+                                    scaleX = textScale
+                                    scaleY = textScale
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                                }
                         )
                     }
                 }
