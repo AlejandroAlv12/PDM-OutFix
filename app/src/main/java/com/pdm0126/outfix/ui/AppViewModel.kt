@@ -151,6 +151,10 @@ class AppViewModel @Inject constructor(
         _uiState.update { it.copy(hasLoadedPlannerDay = true) }
     }
 
+    fun resetPlannerDayLoaded() {
+        _uiState.update { it.copy(hasLoadedPlannerDay = false) }
+    }
+
     fun setSplashFinished() {
         _uiState.update { it.copy(isSplashFinished = true) }
     }

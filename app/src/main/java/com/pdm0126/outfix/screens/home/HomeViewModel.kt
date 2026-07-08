@@ -34,20 +34,35 @@ class HomeViewModel @Inject constructor(
 
     fun shuffleAndSaveToday(todayInfo: DayInfo?) {
         val currentGarments = garments.value
+        val currentPlannerDays = plannerDays.value
+
+        val targetDay = todayInfo?.day
+
+        val plannedGarmentIds = currentPlannerDays
+            .filter { it.day != targetDay }
+            .flatMap { day ->
+            listOfNotNull(
+                day.topGarment?.id,
+                day.bottomGarment?.id,
+                day.shoesGarment?.id,
+                day.hatGarment?.id
+            ) + day.accessories.map { it.id }
+        }.toSet()
+
         val tops = currentGarments.filter {
-            it.status == "AVAILABLE" && it.category in listOf(
+            it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf(
                 "Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido"
             )
         }
         val bottoms = currentGarments.filter {
-            it.status == "AVAILABLE" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda")
+            it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Jeans", "Pantalón", "Short", "Falda")
         }
         val shoes = currentGarments.filter {
-            it.status == "AVAILABLE" && it.category in listOf("Zapatillas", "Botas", "Zapatos")
+            it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Zapatillas", "Botas", "Zapatos")
         }
 
-        val randomTop = tops.randomOrNull() ?: return
-        val randomBottom = if (randomTop.category.equals("Vestido", ignoreCase = true)) null
+        val randomTop = tops.randomOrNull()
+        val randomBottom = if (randomTop?.category?.equals("Vestido", ignoreCase = true) == true) null
                           else bottoms.randomOrNull()
         val randomShoes = shoes.randomOrNull()
 

@@ -296,6 +296,7 @@ fun HomeScreen(
                                         heldFor2Seconds = true
                                         
                                         homeViewModel.shuffleAndSaveToday(todayInfo)
+                                        appViewModel.resetPlannerDayLoaded()
                                         
                                         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                         waitForUpOrCancellation()

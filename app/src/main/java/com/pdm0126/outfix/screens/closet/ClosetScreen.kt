@@ -122,9 +122,13 @@ fun ClosetScreen(
         val rootLayer = rememberGraphicsLayer()
         
         val plannedGarmentIds = remember(plannerDays, appState.plannerEditDay) {
-            val plannerDay = appState.plannerEditDay
+            val targetDay = appState.plannerEditDay ?: run {
+                val currentDayOfWeek = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+                plannerDays.find { it.calendarDay == currentDayOfWeek }?.day
+            } ?: "Lunes"
+
             plannerDays
-                .filter { it.day != plannerDay }
+                .filter { it.day != targetDay }
                 .flatMap { day ->
                     listOfNotNull(
                         day.topGarment?.id,
@@ -136,11 +140,11 @@ fun ClosetScreen(
                 .toSet()
         }
         
-        val tops = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
-        val bottoms = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") } }
-        val shoes = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
-        val headwear = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
-        val accessories = remember(garments, plannedGarmentIds) { garments.filter { it.status != "IN_WASH" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
+        val tops = remember(garments, plannedGarmentIds) { garments.filter { it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") } }
+        val bottoms = remember(garments, plannedGarmentIds) { garments.filter { it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") } }
+        val shoes = remember(garments, plannedGarmentIds) { garments.filter { it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Zapatillas", "Botas", "Zapatos") } }
+        val headwear = remember(garments, plannedGarmentIds) { garments.filter { it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Gorra", "Sombrero", "Gorro") } }
+        val accessories = remember(garments, plannedGarmentIds) { garments.filter { it.status == "AVAILABLE" && !plannedGarmentIds.contains(it.id) && it.category in listOf("Bolso", "Mochila", "Reloj", "Gafas", "Cinturón", "Corbata", "Bufanda", "Joyería", "Accesorio", "Otros", "Otro") } }
         
         val scrollState = rememberScrollState()
         val shouldShowBlur by remember {
@@ -178,7 +182,13 @@ fun ClosetScreen(
                         }
                         .verticalScroll(scrollState)
                 ) {
-                Spacer(modifier = Modifier.height(402.dp))
+                val isButtonVisible = (hasChanges || appState.plannerEditDay != null) && !isClosingEditor
+                val topSpacerHeight by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isButtonVisible) 402.dp else 336.dp,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    label = "topSpacerHeight"
+                )
+                Spacer(modifier = Modifier.height(topSpacerHeight))
 
                 val isDressSelected = selectedTop?.category?.equals("Vestido", ignoreCase = true) == true
                 
@@ -343,11 +353,13 @@ fun ClosetScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = plannerDay != null,
-                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, clip = false),
+                        visible = (hasChanges || plannerDay != null) && !isClosingEditor,
+                        enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 1, delayMillis = 450)) + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }, animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 450)) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End, clip = false, animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 450)),
                         exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 250)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End, clip = false)
                     ) {
+
                         var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isRandomPressedInstant by remember { mutableStateOf(false) }
                         val randomScale by androidx.compose.animation.core.animateFloatAsState(
@@ -422,9 +434,14 @@ fun ClosetScreen(
                     
                     val plannerDay = appState.plannerEditDay
                     
+                    val targetOffsetY = if ((hasChanges || plannerDay != null) && !isClosingEditor) 0.dp else (-100).dp
                     val saveOffsetY by androidx.compose.animation.core.animateDpAsState(
-                        targetValue = if (hasChanges || plannerDay != null || isClosingEditor) 0.dp else (-100).dp,
-                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        targetValue = targetOffsetY,
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 450,
+                            delayMillis = if (targetOffsetY == 0.dp) 0 else 400,
+                            easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        ),
                         label = "saveOffsetY"
                     )
                     
@@ -459,14 +476,12 @@ fun ClosetScreen(
                                 indication = null
                             ) {
                                 closetViewModel.saveOutfit(appState.plannerEditDay, plannerDays)
-                                if (appState.plannerEditDay != null) {
-                                    isClosingEditor = true
-                                    appViewModel.setPlannerEditDay(null)
-                                    scope.launch {
-                                        kotlinx.coroutines.delay(500)
-                                        isClosingEditor = false
-                                        closetViewModel.loadOutfitForDay(null, plannerDays)
-                                    }
+                                isClosingEditor = true
+                                appViewModel.setPlannerEditDay(null)
+                                scope.launch {
+                                    kotlinx.coroutines.delay(500)
+                                    isClosingEditor = false
+                                    closetViewModel.loadOutfitForDay(null, plannerDays)
                                 }
                             }
                             .clip(RoundedCornerShape(percent = 50)),
@@ -511,7 +526,7 @@ fun ClosetScreen(
                             
                             val buttonText = if (plannerDay != null) {
                                 if (isToday) "Guardar hoy" else "Guardar $plannerDay"
-                            } else "Guardar"
+                            } else "Guardar hoy"
                             
                             val buttonIcon = androidx.compose.material.icons.Icons.Rounded.Check
 
@@ -522,8 +537,8 @@ fun ClosetScreen(
                     }
 
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = plannerDay != null,
-                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start, clip = false),
+                        visible = (hasChanges || plannerDay != null) && !isClosingEditor,
+                        enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 1, delayMillis = 450)) + androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }, animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 450)) + androidx.compose.animation.expandHorizontally(expandFrom = Alignment.Start, clip = false, animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 450)),
                         exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 450, delayMillis = 250)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it * 2 }) + androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.Start, clip = false)
                     ) {
                         var cancelButtonOffset by remember { mutableStateOf(Offset.Zero) }
