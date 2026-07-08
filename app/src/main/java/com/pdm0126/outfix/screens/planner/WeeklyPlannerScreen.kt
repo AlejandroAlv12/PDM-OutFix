@@ -1,6 +1,5 @@
 package com.pdm0126.outfix.screens.planner
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,10 +31,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.layout.boundsInRoot
 import java.util.Calendar
-import com.pdm0126.outfix.data.model.DayInfo
 import com.pdm0126.outfix.ui.AppViewModel
 import com.pdm0126.outfix.ui.OutFixScreen
-import com.pdm0126.outfix.ui.bouncyClickable
 import com.pdm0126.outfix.ui.liquidGlass
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
@@ -44,8 +40,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -98,6 +92,11 @@ fun WeeklyPlannerScreen(
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
                     isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
+                    targetToOpen = appState.targetPlannerDayToOpen,
+                    onOpenTarget = { bounds, textBounds, charBounds ->
+                        appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
+                        appViewModel.setTargetPlannerDayToOpen(null)
+                    },
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
@@ -132,6 +131,11 @@ fun WeeklyPlannerScreen(
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
                     isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
+                    targetToOpen = appState.targetPlannerDayToOpen,
+                    onOpenTarget = { bounds, textBounds, charBounds ->
+                        appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
+                        appViewModel.setTargetPlannerDayToOpen(null)
+                    },
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
@@ -166,6 +170,11 @@ fun WeeklyPlannerScreen(
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
                     isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
+                    targetToOpen = appState.targetPlannerDayToOpen,
+                    onOpenTarget = { bounds, textBounds, charBounds ->
+                        appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
+                        appViewModel.setTargetPlannerDayToOpen(null)
+                    },
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
@@ -198,6 +207,8 @@ fun DayCard(
     isCurrentDay: Boolean = false,
     isEditing: Boolean = false,
     isDetailActive: Boolean = false,
+    targetToOpen: String? = null,
+    onOpenTarget: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null,
     onClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onLongClick: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null
@@ -232,6 +243,14 @@ fun DayCard(
                 try { cardBounds = coords.boundsInRoot() } catch (e: Exception) {}
             }
     ) {
+    
+    androidx.compose.runtime.LaunchedEffect(targetToOpen, cardBounds, textBounds, charBounds) {
+        if (targetToOpen == day && cardBounds != null && textBounds != null && charBounds != null) {
+            kotlinx.coroutines.delay(300)
+            onOpenTarget?.invoke(cardBounds!!, textBounds!!, charBounds!!)
+        }
+    }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()

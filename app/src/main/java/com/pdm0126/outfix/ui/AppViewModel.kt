@@ -48,6 +48,8 @@ data class AppUiState(
     val plannerEditDay: String? = null,
     val hasLoadedPlannerDay: Boolean = false,
     
+    val targetPlannerDayToOpen: String? = null,
+    
     val isSplashFinished: Boolean = false
 )
 
@@ -178,6 +180,11 @@ class AppViewModel @Inject constructor(
     fun setSplashFinished() {
         _uiState.update { it.copy(isSplashFinished = true) }
     }
+    
+    fun setTargetPlannerDayToOpen(day: String?) {
+        _uiState.update { it.copy(targetPlannerDayToOpen = day) }
+    }
+    
     fun navigateTo(screen: OutFixScreen) {
         viewModelScope.launch { _navigationRequest.emit(screen) }
     }

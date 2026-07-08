@@ -429,8 +429,20 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         rotatedDays.forEach { day ->
+                            var pillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .onGloballyPositioned { coords ->
+                                        try { pillBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                                    }
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        appViewModel.setTargetPlannerDayToOpen(day.day)
+                                        appViewModel.navigateTo(com.pdm0126.outfix.ui.OutFixScreen.WeeklyPlanner)
+                                    }
                             ) {
                                 Text(
                                     text = day.day.uppercase(),
