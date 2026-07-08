@@ -243,7 +243,6 @@ fun AuthModal(
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
-                // Botón Entrar / Registrarse
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank() || (!isLogin && username.isBlank()) || (!isLogin && confirmPassword.isBlank())) {
