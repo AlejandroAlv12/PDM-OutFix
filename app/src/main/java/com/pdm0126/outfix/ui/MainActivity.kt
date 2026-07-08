@@ -17,9 +17,14 @@ import com.pdm0126.outfix.ui.theme.OutFixTheme
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var sessionManager: SessionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
@@ -28,7 +33,6 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        val sessionManager = SessionManager(this)
         RetrofitClient.sessionManager = sessionManager
 
         setContent {
