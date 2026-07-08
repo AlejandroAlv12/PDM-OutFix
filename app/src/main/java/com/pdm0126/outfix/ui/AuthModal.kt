@@ -250,6 +250,13 @@ fun AuthModal(
                             Toast.makeText(context, "Llena todos los campos", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
+                        
+                        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+                        if (!email.trim().matches(emailRegex)) {
+                            Toast.makeText(context, "Ingresa un correo válido (ej. correo@gmail.com)", Toast.LENGTH_LONG).show()
+                            return@Button
+                        }
+
                         if (!isLogin && password != confirmPassword) {
                             Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
                             return@Button
