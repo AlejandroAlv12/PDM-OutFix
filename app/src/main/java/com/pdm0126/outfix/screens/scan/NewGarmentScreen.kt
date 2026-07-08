@@ -88,6 +88,7 @@ import com.pdm0126.outfix.data.GARMENT_CATEGORIES
 import com.pdm0126.outfix.data.GARMENT_STYLES
 import com.pdm0126.outfix.data.GARMENT_SIZES
 import com.pdm0126.outfix.ui.CustomSizeSlider
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,12 +97,20 @@ fun NewGarmentScreen(
     detectedCategory: String = "Desconocido",
     detectedColors: List<Color> = emptyList(),
     onBack: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    scanViewModel: ScanViewModel = hiltViewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val uiState by scanViewModel.uiState.collectAsState()
     val haptic = LocalHapticFeedback.current
-    var isSaving by remember { mutableStateOf(false) }
+    val isSaving = uiState.isSaving
+
+    androidx.compose.runtime.LaunchedEffect(uiState.saveError) {
+        uiState.saveError?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            scanViewModel.clearError()
+        }
+    }
 
     var title by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "") }
     var selectedCategory by remember { mutableStateOf(if (detectedCategory != "Desconocido") detectedCategory else "Camisa") }
@@ -197,36 +206,19 @@ fun NewGarmentScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .bouncyClickable(enabled = !isSaving) { 
-                            coroutineScope.launch {
-                                isSaving = true
+                        .bouncyClickable(enabled = !isSaving) {
                                 val hexColor = String.format("#%06X", 0xFFFFFF and selectedColor.toArgb())
-                                    val currentSizes = if (selectedCategory in com.pdm0126.outfix.data.SHOE_CATEGORIES) com.pdm0126.outfix.data.SHOE_SIZES else GARMENT_SIZES
-                                    val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
-                                        name = title.ifBlank { selectedCategory },
-                                        category = selectedCategory,
-                                        colorHex = hexColor,
-                                        style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
-                                        brand = marcaEj.ifBlank { null },
-                                        size = currentSizes.getOrNull(selectedSizeIndex),
+                                val currentSizes = if (selectedCategory in com.pdm0126.outfix.data.SHOE_CATEGORIES) com.pdm0126.outfix.data.SHOE_SIZES else GARMENT_SIZES
+                                val request = com.pdm0126.outfix.data.api.dto.CreateGarmentRequest(
+                                    name = title.ifBlank { selectedCategory },
+                                    category = selectedCategory,
+                                    colorHex = hexColor,
+                                    style = if (estiloEj.isNotBlank()) estiloEj else selectedStyle,
+                                    brand = marcaEj.ifBlank { null },
+                                    size = currentSizes.getOrNull(selectedSizeIndex),
                                     imageUrl = imagePath
                                 )
-                                try {
-                                    val result = com.pdm0126.outfix.OutfixApplication.instance.garmentRepository.createGarment(request)
-                                    if (result.isSuccess) {
-                                        android.widget.Toast.makeText(context, "Prenda guardada con éxito", android.widget.Toast.LENGTH_SHORT).show()
-                                        onSave()
-                                    } else {
-                                        android.widget.Toast.makeText(context, "Error guardando prenda", android.widget.Toast.LENGTH_SHORT).show()
-                                        onSave()
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("NewGarmentScreen", "Error", e)
-                                    onSave()
-                                } finally {
-                                    isSaving = false
-                                }
-                            }
+                                scanViewModel.createGarment(request) { onSave() }
                         }
                         .clip(CircleShape)
                         .background(if (isSaving) Color.Gray else LimeGreen.copy(alpha = 0.5f)),

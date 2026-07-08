@@ -15,7 +15,11 @@ object LaundryManager {
     private const val KEY_LAST_EVALUATED_DAY = "last_evaluated_day"
 
 
-    suspend fun evaluatePassedDays(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun evaluatePassedDays(
+        context: Context,
+        plannerRepository: com.pdm0126.outfix.data.repository.PlannerRepository,
+        garmentRepository: com.pdm0126.outfix.data.repository.GarmentRepository
+    ) = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val currentMillis = System.currentTimeMillis()
         
@@ -39,9 +43,6 @@ object LaundryManager {
         val daysPassed = TimeUnit.MILLISECONDS.toDays(diffMillis).toInt()
 
         if (daysPassed > 0) {
-            val repository = OutfixApplication.instance.plannerRepository
-            val garmentRepo = OutfixApplication.instance.garmentRepository
-            
             val daysToProcess = minOf(daysPassed, 7)
             
             for (i in 1..daysToProcess) {
@@ -52,8 +53,8 @@ object LaundryManager {
                 
                 val calendarDayOfWeek = evalCal.get(Calendar.DAY_OF_WEEK)
                 
-                val entities = withContext(Dispatchers.IO) { OutfixApplication.instance.database.plannerDayDao().getAll() }
-                val allGarments = withContext(Dispatchers.IO) { OutfixApplication.instance.database.garmentDao().getAllGarments().associateBy { it.id } }
+                val entities = withContext(Dispatchers.IO) { plannerRepository.getAllDaysRaw() }
+                val allGarments = withContext(Dispatchers.IO) { garmentRepository.getAllGarmentsRaw().associateBy { it.id } }
                 
                 val dayKey = when(calendarDayOfWeek) {
                     Calendar.MONDAY -> "LUN"
@@ -80,9 +81,9 @@ object LaundryManager {
                     }
                     
                     if (garmentsToWash.isNotEmpty()) {
-                        garmentRepo.sendToLaundry(garmentsToWash)
+                        garmentRepository.sendToLaundry(garmentsToWash)
                     }
-                    repository.clearDayOutfit(dayKey)
+                    plannerRepository.clearDayOutfit(dayKey)
                 }
             }
             

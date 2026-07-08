@@ -37,18 +37,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.model.DayInfo
-import com.pdm0126.outfix.screens.closet.ClosetOverlayState
+
 import com.pdm0126.outfix.ui.CharacterWithClothes
 
 @Composable
 fun HomeDetailOverlay(
+    isActive: Boolean,
     dayInfo: DayInfo?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
     onDismiss: () -> Unit
 ) {
     AnimatedVisibility(
-        visible = ClosetOverlayState.isHomeOverlayActive,
+        visible = isActive,
         enter = fadeIn(animationSpec = tween(durationMillis = 1)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
@@ -56,7 +57,7 @@ fun HomeDetailOverlay(
 
         var expandedGarment by remember { mutableStateOf<com.pdm0126.outfix.data.api.dto.GarmentResponse?>(null) }
         
-        androidx.activity.compose.BackHandler(enabled = ClosetOverlayState.isHomeOverlayActive) {
+        androidx.activity.compose.BackHandler(enabled = isActive) {
             if (expandedGarment != null) {
                 expandedGarment = null
             } else {

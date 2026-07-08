@@ -30,7 +30,7 @@ import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.data.local.LentItem
 import com.pdm0126.outfix.ui.bouncyClickable
 import com.pdm0126.outfix.ui.theme.LimeGreen
-import com.pdm0126.outfix.OutfixApplication
+import com.pdm0126.outfix.data.model.DayInfo
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,6 +38,8 @@ import java.util.*
 @Composable
 fun AddLentPanel(
     allGarments: List<GarmentResponse>,
+    plannerDays: List<DayInfo>,
+    lentItems: List<LentItem>,
     onBack: () -> Unit,
     onSave: (garmentId: String, garmentImageUrl: String?, garmentName: String, borrowerName: String, lentDate: String, reclaimDate: String, reclaimDateMillis: Long) -> Unit
 ) {
@@ -64,14 +66,12 @@ fun AddLentPanel(
 
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = reclaimDateMillis)
 
-    val plannerDays by OutfixApplication.instance.plannerRepository.plannerDaysFlow.collectAsState(initial = emptyList())
     val plannerGarmentIds = remember(plannerDays) {
         plannerDays.flatMap { day -> 
             listOfNotNull(day.topGarment?.id, day.bottomGarment?.id, day.shoesGarment?.id, day.hatGarment?.id) + day.accessories.map { it.id }
         }.toSet()
     }
 
-    val lentItems by OutfixApplication.instance.lentRepository.lentItemsFlow.collectAsState(initial = emptyList())
     val activeLentGarmentIds = remember(lentItems) {
         lentItems.filter { !it.isReturned }.map { it.garmentId }.toSet()
     }

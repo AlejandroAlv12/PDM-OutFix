@@ -22,18 +22,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pdm0126.outfix.data.api.RetrofitClient
-import com.pdm0126.outfix.data.api.dto.LoginRequest
-import com.pdm0126.outfix.data.api.dto.RegisterRequest
-import kotlinx.coroutines.launch
-import org.json.JSONObject
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthModal(
     isVisible: Boolean = true,
     onDismiss: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -48,7 +45,23 @@ fun AuthModal(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    
+    val authState by viewModel.authState.collectAsState()
+    val isLoading = authState is AuthState.Loading
+    
+    LaunchedEffect(authState) {
+        when (val state = authState) {
+            is AuthState.Success -> {
+                onSuccess()
+                viewModel.resetState()
+            }
+            is AuthState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.resetState()
+            }
+            else -> {}
+        }
+    }
     
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     
@@ -265,44 +278,14 @@ fun AuthModal(
                             return@Button
                         }
                         
-                        coroutineScope.launch {
-                            isLoading = true
-                            try {
-                                val response = if (isLogin) {
-                                    RetrofitClient.authApi.login(LoginRequest(email.trim(), password))
-                                } else {
-                                    RetrofitClient.authApi.register(RegisterRequest(
-                                        email = email.trim(), 
-                                        password = password, 
-                                        displayName = username.trim()
-                                    ))
-                                }
-                                
-                                if (response.success && response.data != null) {
-                                    RetrofitClient.sessionManager?.apply {
-                                        saveAuthToken(response.data.token)
-                                        saveUserId(response.data.user.id)
-                                        saveUserEmail(response.data.user.email)
-                                        saveUserDisplayName(response.data.user.displayName)
-                                    }
-                                    onSuccess()
-                                } else {
-                                    Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
-                                }
-                            } catch (e: retrofit2.HttpException) {
-                                try {
-                                    val errorJson = e.response()?.errorBody()?.string()
-                                    val msg = JSONObject(errorJson ?: "").optString("message", "Error (${e.code()})")
-                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                } catch (parseException: Exception) {
-                                    Toast.makeText(context, "Error (${e.code()})", Toast.LENGTH_SHORT).show()
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Error de red", Toast.LENGTH_SHORT).show()
-                            } finally {
-                                isLoading = false
-                            }
+                        if (isLogin) {
+                            viewModel.login(com.pdm0126.outfix.data.api.dto.LoginRequest(email.trim(), password))
+                        } else {
+                            viewModel.register(com.pdm0126.outfix.data.api.dto.RegisterRequest(
+                                email = email.trim(), 
+                                password = password, 
+                                displayName = username.trim()
+                            ))
                         }
                     },
                     modifier = Modifier

@@ -40,27 +40,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.model.DayInfo
-import com.pdm0126.outfix.screens.closet.ClosetOverlayState
 import com.pdm0126.outfix.ui.CharacterWithClothes
-import com.pdm0126.outfix.ui.GlobalNavigationState
 import com.pdm0126.outfix.ui.OutFixScreen
 import com.pdm0126.outfix.ui.bouncyClickable
 
 @Composable
 fun DayDetailOverlay(
+    isActive: Boolean,
     dayInfo: DayInfo?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onEditDay: (String) -> Unit
 ) {
     AnimatedVisibility(
-        visible = ClosetOverlayState.isDayOverlayActive,
+        visible = isActive,
         enter = fadeIn(animationSpec = tween(durationMillis = 1)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
         val activeDayInfo = dayInfo ?: return@AnimatedVisibility
 
-        androidx.activity.compose.BackHandler(enabled = ClosetOverlayState.isDayOverlayActive) {
+        androidx.activity.compose.BackHandler(enabled = isActive) {
             onDismiss()
         }
 
@@ -431,9 +431,7 @@ fun DayDetailOverlay(
                                     .graphicsLayer { alpha = contentAlpha }
                                     .bouncyClickable {
                                         onDismiss()
-                                        ClosetOverlayState.plannerEditDay = activeDayInfo.day
-                                        ClosetOverlayState.hasLoadedPlannerDay = false
-                                        GlobalNavigationState.requestedTab = OutFixScreen.Closet
+                                        onEditDay(activeDayInfo.day)
                                     }
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(Color(0xFFBDBDBD)),

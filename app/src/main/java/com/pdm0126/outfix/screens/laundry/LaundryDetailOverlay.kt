@@ -31,11 +31,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
-import com.pdm0126.outfix.screens.closet.ClosetOverlayState
 import com.pdm0126.outfix.ui.bouncyClickable
 
 @Composable
 fun LaundryDetailOverlay(
+    isActive: Boolean,
+    titleText: String,
+    subtitleText: String,
+    buttonBounds: androidx.compose.ui.geometry.Rect?,
     garment: GarmentResponse?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
@@ -43,13 +46,13 @@ fun LaundryDetailOverlay(
     onWash: (String) -> Unit
 ) {
     AnimatedVisibility(
-        visible = ClosetOverlayState.isLaundryOverlayActive,
+        visible = isActive,
         enter = fadeIn(animationSpec = tween(durationMillis = 1)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
         val activeGarment = garment ?: return@AnimatedVisibility
 
-        androidx.activity.compose.BackHandler(enabled = ClosetOverlayState.isLaundryOverlayActive) {
+        androidx.activity.compose.BackHandler(enabled = isActive) {
             onDismiss()
         }
 
@@ -169,14 +172,14 @@ fun LaundryDetailOverlay(
                         verticalArrangement = Arrangement.Center
                     ) {
                         androidx.compose.material3.Text(
-                            text = ClosetOverlayState.laundryTitleText,
+                            text = titleText,
                             fontSize = 22.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
                             color = Color.Black
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         androidx.compose.material3.Text(
-                            text = ClosetOverlayState.laundrySubtitleText,
+                            text = subtitleText,
                             fontSize = 14.sp,
                             color = Color.DarkGray
                         )
@@ -204,7 +207,6 @@ fun LaundryDetailOverlay(
                     }
                 }
                 
-                val buttonBounds = com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryButtonBounds
                 if (buttonBounds != null) {
                     val btnSize = 40.dp
                     val btnStartX = with(density) { buttonBounds.left.toDp() }

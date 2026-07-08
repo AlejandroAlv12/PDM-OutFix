@@ -175,4 +175,10 @@ class GarmentRepository(
         val updatedDto = entity.toDto().copy(status = "AVAILABLE")
         updateGarment(updatedDto)
     }
+
+    suspend fun getAllGarmentsRaw(): List<GarmentEntity> {
+        return withContext(Dispatchers.IO) {
+            garmentDao.getAllGarments()
+        }
+    }
 }

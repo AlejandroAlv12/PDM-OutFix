@@ -87,4 +87,10 @@ class PlannerRepository(
             plannerDayDao.upsertDay(entity)
         }
     }
+
+    suspend fun getAllDaysRaw(): List<PlannerDayEntity> {
+        return withContext(Dispatchers.IO) {
+            plannerDayDao.getAll()
+        }
+    }
 }

@@ -1,6 +1,5 @@
 package com.pdm0126.outfix.screens.menu
 
-import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -37,13 +36,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.data.local.LentItem
+import com.pdm0126.outfix.ui.AppViewModel
 import com.pdm0126.outfix.ui.theme.LimeGreen
-import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+
+
 
 
 
@@ -51,48 +52,46 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HamburgerMenuOverlay(
-    appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null
+    appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
+    appViewModel: AppViewModel,
+    menuViewModel: MenuViewModel = hiltViewModel()
 ) {
-    val isOpen = HamburgerMenuState.isOpen
+    val appState by appViewModel.uiState.collectAsState()
+    val isOpen = appState.isHamburgerOpen
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lentItems by menuViewModel.lentItems.collectAsState()
+    val allGarments by menuViewModel.garments.collectAsState()
+    val plannerDays by menuViewModel.plannerDays.collectAsState()
+    val menuState by menuViewModel.menuState.collectAsState()
+    val selectedLentItem by menuViewModel.selectedLentItem.collectAsState()
 
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val lentRepository = OutfixApplication.instance.lentRepository
-    val garmentRepository = OutfixApplication.instance.garmentRepository
-    val lentItems by lentRepository.lentItemsFlow.collectAsState()
-    val allGarments by garmentRepository.garmentsFlow.collectAsState(initial = emptyList())
-
-    var menuState by remember { mutableStateOf(MenuState.MENU) }
-    var selectedLentItem by remember { mutableStateOf<LentItem?>(null) }
-    
-    LaunchedEffect(isOpen, HamburgerMenuState.targetLentItem) {
-        val target = HamburgerMenuState.targetLentItem
+    LaunchedEffect(isOpen, appState.targetLentItem) {
+        val target = appState.targetLentItem
         if (target != null && isOpen) {
-            menuState = MenuState.MENU
+            menuViewModel.navigateTo(MenuState.MENU)
             kotlinx.coroutines.delay(600)
-            
-            menuState = MenuState.LENT_LIST
+            menuViewModel.navigateTo(MenuState.LENT_LIST)
             kotlinx.coroutines.delay(400)
-            
-            selectedLentItem = target
-            menuState = MenuState.LENT_DETAIL
-            
-            HamburgerMenuState.targetLentItem = null
+            menuViewModel.selectLentItem(target)
+            menuViewModel.navigateTo(MenuState.LENT_DETAIL)
+            appViewModel.clearTargetLentItem()
         }
     }
-    
+
     androidx.activity.compose.BackHandler(enabled = isOpen) {
         when (menuState) {
-            MenuState.MENU -> HamburgerMenuState.isOpen = false
-            MenuState.LENT_LIST -> menuState = MenuState.MENU
-            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuState = MenuState.LENT_LIST
+            MenuState.MENU -> appViewModel.closeHamburgerMenu()
+            MenuState.LENT_LIST -> menuViewModel.navigateTo(MenuState.MENU)
+            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuViewModel.navigateTo(MenuState.LENT_LIST)
         }
     }
+
+    LaunchedEffect(Unit) { menuViewModel.refresh() }
 
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     val screenWidthPx = configuration.screenWidthDp * density
-    
+
     val transitionState = remember { MutableTransitionState(false) }
     transitionState.targetState = isOpen
     val transition = updateTransition(transitionState, label = "HamburgerMenuTransition")
@@ -116,6 +115,7 @@ fun HamburgerMenuOverlay(
     ) { if (it) 0f else -screenWidthPx }
 
     if (!transitionState.currentState && !transitionState.targetState) return
+
     val isExpanded = menuState != MenuState.MENU
     val panelWidthFraction by animateFloatAsState(
         targetValue = if (isExpanded) 0.92f else 0.88f,
@@ -127,11 +127,6 @@ fun HamburgerMenuOverlay(
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "panelHeight"
     )
-
-    LaunchedEffect(Unit) {
-        lentRepository.refresh()
-    }
-
     val bgAlpha by transition.animateFloat(
         transitionSpec = { tween(800, easing = FastOutSlowInEasing) },
         label = "hamburgerBgAlpha"
@@ -147,9 +142,9 @@ fun HamburgerMenuOverlay(
                     indication = null,
                     onClick = {
                         when (menuState) {
-                            MenuState.MENU -> HamburgerMenuState.isOpen = false
-                            MenuState.LENT_LIST -> menuState = MenuState.MENU
-                            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuState = MenuState.LENT_LIST
+                            MenuState.MENU -> appViewModel.closeHamburgerMenu()
+                            MenuState.LENT_LIST -> menuViewModel.navigateTo(MenuState.MENU)
+                            MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuViewModel.navigateTo(MenuState.LENT_LIST)
                         }
                     }
                 )
@@ -168,9 +163,9 @@ fun HamburgerMenuOverlay(
                 modifier = Modifier
                     .width(panelWidth)
                     .height(panelHeight)
-                    .align(Alignment.Center)          
+                    .align(Alignment.Center)
                     .graphicsLayer { translationX = containerOffsetX }
-                    .clip(RoundedCornerShape(cornerRadius.dp)) 
+                    .clip(RoundedCornerShape(cornerRadius.dp))
                     .background(Color.White)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -192,54 +187,43 @@ fun HamburgerMenuOverlay(
                 ) { state ->
                     when (state) {
                         MenuState.MENU -> MenuPanel(
-                            onPrestadosClick = { menuState = MenuState.LENT_LIST },
-                            onClose = { HamburgerMenuState.isOpen = false }
+                            onPrestadosClick = { menuViewModel.navigateTo(MenuState.LENT_LIST) },
+                            onClose = { appViewModel.closeHamburgerMenu() }
                         )
                         MenuState.LENT_LIST -> LentListPanel(
                             lentItems = lentItems,
-                            onBack = { menuState = MenuState.MENU },
-                            onAddClick = { menuState = MenuState.ADD_LENT },
+                            onBack = { menuViewModel.navigateTo(MenuState.MENU) },
+                            onAddClick = { menuViewModel.navigateTo(MenuState.ADD_LENT) },
                             onItemClick = { item ->
-                                selectedLentItem = item
-                                menuState = MenuState.LENT_DETAIL
+                                menuViewModel.selectLentItem(item)
+                                menuViewModel.navigateTo(MenuState.LENT_DETAIL)
                             }
                         )
                         MenuState.ADD_LENT -> AddLentPanel(
                             allGarments = allGarments,
-                            onBack = { menuState = MenuState.LENT_LIST },
+                            plannerDays = plannerDays,
+                            lentItems = lentItems,
+                            onBack = { menuViewModel.navigateTo(MenuState.LENT_LIST) },
                             onSave = { garmentId, garmentImageUrl, garmentName, borrowerName, lentDate, reclaimDate, reclaimDateMillis ->
-                                coroutineScope.launch {
-                                    val newItem = lentRepository.createLentItem(
-                                        garmentId = garmentId,
-                                        garmentImageUrl = garmentImageUrl,
-                                        garmentName = garmentName,
-                                        borrowerName = borrowerName,
-                                        lentDate = lentDate,
-                                        reclaimDate = reclaimDate,
-                                        reclaimDateMillis = reclaimDateMillis
-                                    )
-                                    val garment = allGarments.find { it.id == garmentId }
-                                    if (garment != null) {
-                                        garmentRepository.updateGarment(garment.copy(status = "LENT"))
+                                menuViewModel.createLentItem(
+                                    garmentId = garmentId,
+                                    garmentImageUrl = garmentImageUrl,
+                                    garmentName = garmentName,
+                                    borrowerName = borrowerName,
+                                    lentDate = lentDate,
+                                    reclaimDate = reclaimDate,
+                                    reclaimDateMillis = reclaimDateMillis,
+                                    onCreated = { newItem ->
+                                        scheduleReclaimNotification(context, newItem)
                                     }
-                                    scheduleReclaimNotification(context, newItem)
-                                    menuState = MenuState.LENT_LIST
-                                }
+                                )
                             }
                         )
                         MenuState.LENT_DETAIL -> LentDetailPanel(
                             lentItem = selectedLentItem,
-                            onBack = { menuState = MenuState.LENT_LIST },
+                            onBack = { menuViewModel.navigateTo(MenuState.LENT_LIST) },
                             onReturned = { item ->
-                                coroutineScope.launch {
-                                    lentRepository.markReturned(item.id)
-                                    val garment = allGarments.find { it.id == item.garmentId }
-                                    if (garment != null) {
-                                        garmentRepository.updateGarment(garment.copy(status = "AVAILABLE"))
-                                    }
-                                    cancelReclaimNotification(context, item.id)
-                                    menuState = MenuState.LENT_LIST
-                                }
+                                menuViewModel.markReturned(item) { cancelReclaimNotification(context, item.id) }
                             }
                         )
                     }
@@ -248,12 +232,3 @@ fun HamburgerMenuOverlay(
         }
     }
 }
-
-
-
-
-
-
-
-
-

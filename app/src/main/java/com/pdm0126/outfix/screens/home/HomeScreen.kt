@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.graphics.graphicsLayer
-import com.pdm0126.outfix.screens.closet.ClosetOverlayState
+import com.pdm0126.outfix.ui.AppViewModel
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import com.pdm0126.outfix.data.model.DayInfo
@@ -55,49 +55,30 @@ import com.pdm0126.outfix.screens.closet.parseColorHex
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    appViewModel: AppViewModel,
+    homeViewModel: HomeViewModel = hiltViewModel()
+) {
     androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
-        val coroutineScope = rememberCoroutineScope()
-        val repository = OutfixApplication.instance.plannerRepository
-        val garmentRepo = OutfixApplication.instance.garmentRepository
-    
-        val plannerDays by repository.plannerDaysFlow.collectAsState(initial = emptyList())
-        val garments by garmentRepo.garmentsFlow.collectAsState(initial = emptyList())
+        val appState by appViewModel.uiState.collectAsState()
+        
+        val plannerDays by homeViewModel.plannerDays.collectAsState()
+        val garments by homeViewModel.garments.collectAsState()
+        val lentItems by homeViewModel.lentItems.collectAsState()
     
         val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
         val todayInfo = plannerDays.find { it.calendarDay == currentDayOfWeek }
         
-        val lentRepo = OutfixApplication.instance.lentRepository
-        val lentItems by lentRepo.lentItemsFlow.collectAsState(initial = emptyList())
         val pendingLentItems = remember(lentItems) { lentItems.filter { !it.isReturned } }
-        
-        val streak = remember(plannerDays, currentDayOfWeek) {
-            var count = 0
-            var checkDay = currentDayOfWeek
-            var isFirstCheck = true
-            
-            for (i in 0 until 7) {
-                val dayInfo = plannerDays.find { it.calendarDay == checkDay }
-                val hasOutfit = dayInfo != null && (dayInfo.topGarment != null || dayInfo.bottomGarment != null || dayInfo.shoesGarment != null || dayInfo.hatGarment != null)
-                
-                if (hasOutfit) {
-                    count++
-                } else if (isFirstCheck) {
-                } else {
-                    break
-                }
-                
-                isFirstCheck = false
-                checkDay = if (checkDay == java.util.Calendar.SUNDAY) java.util.Calendar.SATURDAY else checkDay - 1
-            }
-            count
-        }
+        val streak = remember(plannerDays, currentDayOfWeek) { homeViewModel.computeStreak(plannerDays) }
     
         val scrollState = rememberScrollState()
         val density = androidx.compose.ui.platform.LocalDensity.current
+        val coroutineScope = rememberCoroutineScope()
         
         var previousScrollOffset by remember { mutableStateOf(0) }
         LaunchedEffect(scrollState) {
@@ -106,13 +87,13 @@ fun HomeScreen() {
                     val diff = currentOffset - previousScrollOffset
                     
                     if (diff > 20) {
-                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = false
+                        appViewModel.setFabVisible(false)
                     } else if (diff < -20) {
-                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = true
+                        appViewModel.setFabVisible(true)
                     }
                     
                     if (currentOffset == 0) {
-                        com.pdm0126.outfix.screens.closet.ClosetOverlayState.isFabVisible = true
+                        appViewModel.setFabVisible(true)
                     }
                     
                     if (kotlin.math.abs(diff) > 20) {
@@ -140,7 +121,7 @@ fun HomeScreen() {
                         .fillMaxWidth()
                         .height(320.dp)
                         .onGloballyPositioned { coords ->
-                            try { ClosetOverlayState.homeOverlayBounds = coords.boundsInRoot() } catch (e: Exception) {}
+                            try { appViewModel.setHomeOverlayBounds(coords.boundsInRoot()) } catch (e: Exception) {}
                         }
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFFF6EEE6))
@@ -149,7 +130,7 @@ fun HomeScreen() {
                             if (scrollState.value > topOffsetPx) return@clickable
                             
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            ClosetOverlayState.homeDayInfo = DayInfo(
+                            val info = DayInfo(
                                 day = "Hoy",
                                 calendarDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK),
                                 topColor = Color.Transparent,
@@ -162,9 +143,9 @@ fun HomeScreen() {
                                 hatGarment = todayInfo?.hatGarment,
                                 accessories = todayInfo?.accessories ?: emptyList()
                             )
-                            ClosetOverlayState.isHomeOverlayActive = true
+                            appViewModel.showHomeOverlay(info, appState.homeOverlayBounds)
                         }
-                        .graphicsLayer { alpha = if (ClosetOverlayState.isHomeOverlayActive) 0f else 1f }
+                        .graphicsLayer { alpha = if (appState.isHomeOverlayActive) 0f else 1f }
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -314,26 +295,7 @@ fun HomeScreen() {
                                         isRandomPressedInstant = false
                                         heldFor2Seconds = true
                                         
-                                        val availableTops = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Camiseta", "Camisa", "Blusa", "Top", "Suéter", "Chaqueta", "Abrigo", "Vestido") }
-                                        val availableBottoms = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Jeans", "Pantalón", "Short", "Falda") }
-                                        val availableShoes = garments.filter { it.status == "AVAILABLE" && it.category in listOf("Zapatillas", "Botas", "Zapatos") }
-                                        
-                                        val randomTop = availableTops.randomOrNull()
-                                        val randomBottom = if (randomTop?.category?.equals("Vestido", ignoreCase = true) == true) null else availableBottoms.randomOrNull()
-                                        val randomShoes = availableShoes.randomOrNull()
-                                        
-                                        if (todayInfo != null) {
-                                            coroutineScope.launch {
-                                                repository.saveDayOutfit(
-                                                    dayKey = todayInfo.day,
-                                                    top = randomTop,
-                                                    bottom = randomBottom,
-                                                    shoes = randomShoes,
-                                                    head = todayInfo.hatGarment,
-                                                    accessories = todayInfo.accessories
-                                                )
-                                            }
-                                        }
+                                        homeViewModel.shuffleAndSaveToday(todayInfo)
                                         
                                         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                         waitForUpOrCancellation()
@@ -548,8 +510,7 @@ fun HomeScreen() {
                                         .background(Color.White)
                                         .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                         .clickable {
-                                            com.pdm0126.outfix.screens.menu.HamburgerMenuState.targetLentItem = lentItem
-                                            com.pdm0126.outfix.screens.menu.HamburgerMenuState.isOpen = true
+                                            appViewModel.openHamburgerMenu(lentItem)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {

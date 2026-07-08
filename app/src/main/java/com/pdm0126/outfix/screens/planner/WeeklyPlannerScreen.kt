@@ -32,14 +32,10 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.layout.boundsInRoot
-
 import java.util.Calendar
-
 import com.pdm0126.outfix.data.model.DayInfo
-import com.pdm0126.outfix.OutfixApplication
-import com.pdm0126.outfix.ui.GlobalNavigationState
+import com.pdm0126.outfix.ui.AppViewModel
 import com.pdm0126.outfix.ui.OutFixScreen
-import com.pdm0126.outfix.screens.closet.ClosetOverlayState
 import com.pdm0126.outfix.ui.bouncyClickable
 import com.pdm0126.outfix.ui.liquidGlass
 import androidx.compose.material.icons.Icons
@@ -57,20 +53,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun WeeklyPlannerScreen() {
+fun WeeklyPlannerScreen(
+    appViewModel: AppViewModel,
+    plannerViewModel: PlannerViewModel = hiltViewModel()
+) {
+    val appState by appViewModel.uiState.collectAsState()
     val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
-    
-    var editingDay by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-    
-    val daysList by OutfixApplication.instance.plannerRepository.plannerDaysFlow.collectAsState(initial = emptyList())
-    
-    val rotatedDays = remember(currentDayOfWeek, daysList) {
-        if (daysList.isEmpty()) return@remember emptyList()
-        val todayIndex = daysList.indexOfFirst { it.calendarDay == currentDayOfWeek }.takeIf { it >= 0 } ?: 0
-        daysList.drop(todayIndex) + daysList.take(todayIndex)
-    }
+    var editingDay by remember { mutableStateOf<String?>(null) }
+    val daysList by plannerViewModel.plannerDays.collectAsState()
+    val rotatedDays = remember(currentDayOfWeek, daysList) { plannerViewModel.rotatedDays(daysList) }
 
     Column(
         modifier = Modifier
@@ -103,19 +97,17 @@ fun WeeklyPlannerScreen() {
                     modifier = Modifier.weight(1f),
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
+                    isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
                     onEditClick = {
-                        ClosetOverlayState.plannerEditDay = d.day
-                        ClosetOverlayState.hasLoadedPlannerDay = false
-                        GlobalNavigationState.requestedTab = OutFixScreen.Closet
+                        appViewModel.setPlannerEditDay(d.day)
+                        appViewModel.navigateTo(OutFixScreen.Closet)
                         editingDay = null
                     },
                     onLongClick = { bounds ->
-                        ClosetOverlayState.detailDayInfo = d
-                        ClosetOverlayState.detailDayBounds = bounds
-                        ClosetOverlayState.isDayOverlayActive = true
+                        appViewModel.showDayDetail(d, bounds)
                         editingDay = null
                     }
                 )
@@ -139,19 +131,17 @@ fun WeeklyPlannerScreen() {
                     modifier = Modifier.weight(1f),
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
+                    isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
                     onEditClick = {
-                        ClosetOverlayState.plannerEditDay = d.day
-                        ClosetOverlayState.hasLoadedPlannerDay = false
-                        GlobalNavigationState.requestedTab = OutFixScreen.Closet
+                        appViewModel.setPlannerEditDay(d.day)
+                        appViewModel.navigateTo(OutFixScreen.Closet)
                         editingDay = null
                     },
                     onLongClick = { bounds ->
-                        ClosetOverlayState.detailDayInfo = d
-                        ClosetOverlayState.detailDayBounds = bounds
-                        ClosetOverlayState.isDayOverlayActive = true
+                        appViewModel.showDayDetail(d, bounds)
                         editingDay = null
                     }
                 )
@@ -175,19 +165,17 @@ fun WeeklyPlannerScreen() {
                     modifier = Modifier.width(115.dp),
                     isCurrentDay = d.calendarDay == currentDayOfWeek,
                     isEditing = editingDay == d.day,
+                    isDetailActive = appState.isDayOverlayActive && appState.detailDayInfo?.day == d.day,
                     onClick = { 
                         editingDay = if (editingDay == d.day) null else d.day 
                     },
                 onEditClick = {
-                    ClosetOverlayState.plannerEditDay = d.day
-                    ClosetOverlayState.hasLoadedPlannerDay = false
-                    GlobalNavigationState.requestedTab = OutFixScreen.Closet
+                    appViewModel.setPlannerEditDay(d.day)
+                    appViewModel.navigateTo(OutFixScreen.Closet)
                     editingDay = null
                 },
                 onLongClick = { bounds ->
-                    ClosetOverlayState.detailDayInfo = d
-                    ClosetOverlayState.detailDayBounds = bounds
-                    ClosetOverlayState.isDayOverlayActive = true
+                    appViewModel.showDayDetail(d, bounds)
                     editingDay = null
                 }
             )
@@ -209,6 +197,7 @@ fun DayCard(
     modifier: Modifier = Modifier,
     isCurrentDay: Boolean = false,
     isEditing: Boolean = false,
+    isDetailActive: Boolean = false,
     onClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onLongClick: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null
@@ -219,9 +208,6 @@ fun DayCard(
     var buttonCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
     var cardBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
-
-    val isDetailActive = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isDayOverlayActive &&
-                         com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailDayInfo?.day == day
 
     Box(
         modifier = modifier

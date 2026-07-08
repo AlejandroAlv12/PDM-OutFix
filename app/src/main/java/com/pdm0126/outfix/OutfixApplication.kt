@@ -4,24 +4,19 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
-import com.pdm0126.outfix.data.local.AppDatabase
-import com.pdm0126.outfix.data.repository.GarmentRepository
-import com.pdm0126.outfix.data.repository.LentRepository
-import com.pdm0126.outfix.data.repository.PlannerRepository
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class OutfixApplication : Application() {
-    
+
     companion object {
-        lateinit var instance: OutfixApplication
-            private set
 
         const val LENT_NOTIFICATION_CHANNEL_ID = "lent_reclaim_channel"
         const val LENT_NOTIFICATION_CHANNEL_NAME = "Prendas por reclamar"
     }
-    
+
     override fun onCreate() {
         super.onCreate()
-        instance = this
         createNotificationChannels()
         com.pdm0126.outfix.utils.NotificationHelper.scheduleSunsetNotification(this)
     }
@@ -39,10 +34,4 @@ class OutfixApplication : Application() {
             notificationManager.createNotificationChannel(channel)
         }
     }
-    
-    val database by lazy { AppDatabase.getDatabase(this) }
-    
-    val garmentRepository by lazy { GarmentRepository(database.garmentDao()) }
-    val plannerRepository by lazy { PlannerRepository(database.plannerDayDao(), database.garmentDao()) }
-    val lentRepository by lazy { LentRepository(this) }
 }

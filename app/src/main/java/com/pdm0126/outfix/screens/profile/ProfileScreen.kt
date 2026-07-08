@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pdm0126.outfix.data.api.RetrofitClient
+
 import com.pdm0126.outfix.ui.bouncyClickable
 import com.pdm0126.outfix.ui.liquidGlass
 import androidx.compose.foundation.border
@@ -28,17 +28,18 @@ import android.os.Build
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloat
+import androidx.hilt.navigation.compose.hiltViewModel
+
 @Composable
 fun ProfileScreen(
     onLogoutClick: () -> Unit, 
-    onShowAuth: () -> Unit = {}
+    onShowAuth: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val sessionManager = RetrofitClient.sessionManager
-    val hasSession by sessionManager?.sessionState?.collectAsState(initial = sessionManager.fetchAuthToken() != null)
-        ?: remember { mutableStateOf(false) }
+    val hasSession by viewModel.hasSession.collectAsState(initial = false)
 
-    val displayName = if (hasSession) sessionManager?.fetchUserDisplayName() ?: "Usuario" else "Bienvenido a OutFix"
-    val email = if (hasSession) sessionManager?.fetchUserEmail() ?: "correo@ejemplo.com" else "Inicia sesión para guardar y sincronizar tu ropa en todos tus dispositivos."
+    val displayName = if (hasSession) viewModel.getUserDisplayName() else "Bienvenido a OutFix"
+    val email = if (hasSession) viewModel.getUserEmail() else "Inicia sesión para guardar y sincronizar tu ropa en todos tus dispositivos."
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(

@@ -46,15 +46,17 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GarmentDetailOverlay(
+    isActive: Boolean,
     garment: GarmentResponse?,
     sourceBounds: androidx.compose.ui.geometry.Rect?,
     onDismiss: () -> Unit,
     onUpdate: (GarmentResponse) -> Unit,
     onDelete: (String) -> Unit,
+    onClearDetail: () -> Unit,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer? = null
 ) {
     AnimatedVisibility(
-        visible = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive,
+        visible = isActive,
         enter = fadeIn(animationSpec = tween(durationMillis = 1)),
         exit = fadeOut(animationSpec = tween(durationMillis = 1, delayMillis = 350))
     ) {
@@ -88,13 +90,13 @@ fun GarmentDetailOverlay(
 
         val transition = this.transition
         
-        androidx.activity.compose.BackHandler(enabled = com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive) {
+        androidx.activity.compose.BackHandler(enabled = isActive) {
             onDismiss()
         }
         
         LaunchedEffect(transition.currentState) {
-            if (transition.currentState == androidx.compose.animation.EnterExitState.PostExit && !com.pdm0126.outfix.screens.closet.ClosetOverlayState.isOverlayActive) {
-                com.pdm0126.outfix.screens.closet.ClosetOverlayState.detailGarment = null
+            if (transition.currentState == androidx.compose.animation.EnterExitState.PostExit && !isActive) {
+                onClearDetail()
             }
         }
         

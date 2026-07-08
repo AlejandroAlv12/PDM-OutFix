@@ -21,12 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.pdm0126.outfix.OutfixApplication
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
-import kotlinx.coroutines.launch
-import java.util.Calendar
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.pdm0126.outfix.ui.AppViewModel
 import com.pdm0126.outfix.ui.bouncyClickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -43,19 +39,21 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import com.pdm0126.outfix.ui.liquidGlass
 import android.os.Build
-
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateContentSize
+import androidx.hilt.navigation.compose.hiltViewModel
+import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
-fun LaundryScreen() {
-    val coroutineScope = rememberCoroutineScope()
-    val repository = OutfixApplication.instance.garmentRepository
-    val plannerRepo = OutfixApplication.instance.plannerRepository
-    
-    val allGarments by repository.garmentsFlow.collectAsState(initial = emptyList())
-    val plannerDays by plannerRepo.plannerDaysFlow.collectAsState(initial = emptyList())
-    
+fun LaundryScreen(
+    appViewModel: AppViewModel,
+    laundryViewModel: LaundryViewModel = hiltViewModel()
+) {
+    val allGarments by laundryViewModel.garments.collectAsState()
+    val plannerDays by laundryViewModel.plannerDays.collectAsState()
+
     val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
     
     val todayInfo = plannerDays.find { it.calendarDay == currentDayOfWeek }
@@ -129,15 +127,16 @@ fun LaundryScreen() {
                         onWashClick = {
                             if (!isActual) {
                                 if (confirmLavarGarmentId == garment.id) {
-                                    coroutineScope.launch {
-                                        repository.markAsWashed(garment.id)
-                                    }
+                                    laundryViewModel.markAsWashed(garment.id)
                                     confirmLavarGarmentId = null
                                 } else {
                                     confirmLavarGarmentId = garment.id
-                                    confirmVaciar = false // Reset the other confirmation
+                                    confirmVaciar = false
                                 }
                             }
+                        },
+                        onLaundryOverlay = { g, bounds, buttonBounds, title, subtitle ->
+                            appViewModel.showLaundryOverlay(g, bounds, buttonBounds, title, subtitle)
                         }
                     )
                 }
@@ -151,11 +150,7 @@ fun LaundryScreen() {
                     .padding(top = 24.dp)
                     .bouncyClickable {
                         if (confirmVaciar) {
-                            coroutineScope.launch {
-                                usedGarments.forEach { garment ->
-                                    repository.markAsWashed(garment.id)
-                                }
-                            }
+                            laundryViewModel.markAllWashed(usedGarments)
                             confirmVaciar = false
                         } else {
                             confirmVaciar = true
@@ -227,7 +222,8 @@ fun LaundryItemCard(
     garment: GarmentResponse,
     isActual: Boolean,
     isConfirming: Boolean = false,
-    onWashClick: () -> Unit
+    onWashClick: () -> Unit,
+    onLaundryOverlay: (GarmentResponse, androidx.compose.ui.geometry.Rect?, androidx.compose.ui.geometry.Rect?, String, String) -> Unit = { _, _, _, _, _ -> }
 ) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var imageBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -251,10 +247,6 @@ fun LaundryItemCard(
                 onClick = {},
                 onLongClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryGarment = garment
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryOverlayBounds = imageBounds
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryButtonBounds = buttonBounds
-                    
                     val titleText = if (isActual) "Actual" else "Usada"
                     val subText = if (isActual) {
                         "Hoy"
@@ -267,17 +259,10 @@ fun LaundryItemCard(
                                 val date = sdf.parse(dateStr)
                                 val displaySdf = java.text.SimpleDateFormat("dd 'de' MMMM", java.util.Locale("es", "ES"))
                                 "El " + displaySdf.format(date!!)
-                            } catch (e: Exception) {
-                                "Recientemente"
-                            }
-                        } else {
-                            "Recientemente"
-                        }
+                            } catch (e: Exception) { "Recientemente" }
+                        } else { "Recientemente" }
                     }
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundryTitleText = titleText
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.laundrySubtitleText = subText
-                    
-                    com.pdm0126.outfix.screens.closet.ClosetOverlayState.isLaundryOverlayActive = true
+                    onLaundryOverlay(garment, imageBounds, buttonBounds, titleText, subText)
                 }
             )
             .clip(RoundedCornerShape(24.dp))
