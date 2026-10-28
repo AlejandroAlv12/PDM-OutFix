@@ -80,27 +80,6 @@ fun HomeScreen(
         val density = androidx.compose.ui.platform.LocalDensity.current
         val coroutineScope = rememberCoroutineScope()
         
-        var previousScrollOffset by remember { mutableStateOf(0) }
-        LaunchedEffect(scrollState) {
-            androidx.compose.runtime.snapshotFlow { scrollState.value }
-                .collect { currentOffset ->
-                    val diff = currentOffset - previousScrollOffset
-                    
-                    if (diff > 20) {
-                        appViewModel.setFabVisible(false)
-                    } else if (diff < -20) {
-                        appViewModel.setFabVisible(true)
-                    }
-                    
-                    if (currentOffset == 0) {
-                        appViewModel.setFabVisible(true)
-                    }
-                    
-                    if (kotlin.math.abs(diff) > 20) {
-                        previousScrollOffset = currentOffset
-                    }
-                }
-        }
 
         Column(
             modifier = Modifier

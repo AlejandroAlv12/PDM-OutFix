@@ -88,10 +88,6 @@ fun ClosetScreen(
         closetViewModel.refreshGarments()
     }
 
-    LaunchedEffect(appState.plannerEditDay) {
-        appViewModel.setFabVisible(appState.plannerEditDay == null)
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         if (isSyncing) {
             CircularProgressIndicator(

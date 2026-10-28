@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ fun WeeklyPlannerScreen(
     var editingDay by remember { mutableStateOf<String?>(null) }
     val daysList by plannerViewModel.plannerDays.collectAsState()
     val rotatedDays = remember(currentDayOfWeek, daysList) { plannerViewModel.rotatedDays(daysList) }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
@@ -72,7 +74,7 @@ fun WeeklyPlannerScreen(
                 editingDay = null
             }
             .padding(start = 12.dp, end = 12.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(12.dp))

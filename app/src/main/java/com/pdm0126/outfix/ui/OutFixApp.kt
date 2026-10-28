@@ -18,6 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -29,6 +33,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -147,6 +152,14 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var showAuthModal by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
+    var showScanner by remember { mutableStateOf(false) }
+    var capturedImagePath by remember { mutableStateOf<String?>(null) }
+    var capturedCategory by remember { mutableStateOf("") }
+    var capturedColors by remember { mutableStateOf<List<androidx.compose.ui.graphics.Color>>(emptyList()) }
+
+    val isFabExpanded = showScanner || capturedImagePath != null
+    val isHome = pagerState.currentPage == screens.indexOf(OutFixScreen.Home)
 
     val authTransition = androidx.compose.animation.core.updateTransition(
         targetState = showAuthModal, label = "AuthTransition"
@@ -200,6 +213,20 @@ fun MainScreen(onLogout: () -> Unit = {}) {
     ) { if (it) 1f else 0f }
 
     val globalAppLayer = rememberGraphicsLayer()
+
+    val globalScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val deltaY = available.y
+                if (deltaY < -15f) {
+                    appViewModel.setFabVisible(false)
+                } else if (deltaY > 15f) {
+                    appViewModel.setFabVisible(true)
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -257,7 +284,11 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 }
             ) { innerPadding ->
 
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(globalScrollConnection)
+                ) {
                     HorizontalPager(
                         modifier = Modifier
                             .fillMaxSize()
@@ -298,23 +329,16 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                             backgroundLayer = backgroundLayer,
                             pagerCoords = pagerCoords,
                             liquidBlur = liquidBlur,
+                            isCompact = !appState.isFabVisible && !isFabExpanded,
                             onItemSelected = { screen -> navigator.navigate(screen) }
                         )
                     }
                 }
             }
 
-            var fabGlassOffset by remember { mutableStateOf(Offset.Zero) }
-            var showScanner by remember { mutableStateOf(false) }
-            var capturedImagePath by remember { mutableStateOf<String?>(null) }
-            var capturedCategory by remember { mutableStateOf("") }
-            var capturedColors by remember { mutableStateOf<List<androidx.compose.ui.graphics.Color>>(emptyList()) }
-
             val configuration = LocalConfiguration.current
             val screenWidth = configuration.screenWidthDp.dp
             val screenHeight = configuration.screenHeightDp.dp + 100.dp
-            val isFabExpanded = showScanner || capturedImagePath != null
-            val isHome = pagerState.currentPage == screens.indexOf(OutFixScreen.Home)
 
             androidx.activity.compose.BackHandler(enabled = isFabExpanded) {
                 if (capturedImagePath != null) { capturedImagePath = null; showScanner = true }
@@ -589,23 +613,60 @@ fun FloatingBottomNavBar(
     backgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer,
     pagerCoords: LayoutCoordinates?,
     liquidBlur: Float = 12f,
+    isCompact: Boolean = false,
     onItemSelected: (OutFixScreen) -> Unit
 ) {
     var glassOffset by remember { mutableStateOf(Offset.Zero) }
+    var isSliderActive by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
+    val isActuallyCompact = isCompact && !isSliderActive
+
+    val navBarPaddingHorizontal by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isActuallyCompact) 44.dp else 20.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "navBarPaddingHorizontal"
+    )
+    val navBarPaddingBottom by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isActuallyCompact) 10.dp else 24.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "navBarPaddingBottom"
+    )
+    val navBarHeight by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isActuallyCompact) 62.dp else 72.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "navBarHeight"
+    )
+    val ballSize by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isActuallyCompact) 48.dp else 56.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "ballSize"
+    )
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = navBarPaddingHorizontal, vertical = navBarPaddingBottom),
         contentAlignment = Alignment.BottomCenter
     ) {
         val maxWidth = maxWidth
         val itemWidth = maxWidth / screens.size
-        val indicatorOffset by remember {
+        val indicatorOffset by remember(itemWidth) {
             derivedStateOf {
                 val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
                 itemWidth * position
@@ -614,7 +675,7 @@ fun FloatingBottomNavBar(
 
         Box(
             modifier = Modifier
-                .height(72.dp)
+                .height(navBarHeight)
                 .fillMaxWidth()
                 .onGloballyPositioned { coords ->
                     if (pagerCoords != null) glassOffset = pagerCoords.localPositionOf(coords, Offset.Zero)
@@ -624,9 +685,18 @@ fun FloatingBottomNavBar(
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .liquidGlass(blur = liquidBlur, saturation = 1.5f, refraction = 0.55f, curve = 0.50f, dispersion = 0.25f)
+                        .liquidGlass(
+                            blur = liquidBlur,
+                            saturation = 1.5f,
+                            refraction = 0.55f,
+                            curve = 0.50f,
+                            dispersion = 0.25f,
+                            cornerRadius = navBarHeight / 2
+                        )
                 ) {
-                    translate(left = -glassOffset.x, top = -glassOffset.y) { drawLayer(backgroundLayer) }
+                    translate(left = -glassOffset.x, top = -glassOffset.y) {
+                        drawLayer(backgroundLayer)
+                    }
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2F2F2F)))
@@ -635,7 +705,7 @@ fun FloatingBottomNavBar(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(36.dp))
+                    .clip(RoundedCornerShape(navBarHeight / 2))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(Color.Black.copy(alpha = 0.15f), Color.Black.copy(alpha = 0.25f))
@@ -646,20 +716,22 @@ fun FloatingBottomNavBar(
                         brush = Brush.verticalGradient(
                             colors = listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.05f))
                         ),
-                        shape = RoundedCornerShape(36.dp)
+                        shape = RoundedCornerShape(navBarHeight / 2)
                     )
             )
         }
 
         Row(
-            modifier = Modifier.height(72.dp).fillMaxWidth(),
+            modifier = Modifier.height(navBarHeight).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
             val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
             screens.forEachIndexed { index, screen ->
                 val distance = kotlin.math.abs(position - index).coerceIn(0f, 1f)
-                val iconSize = 34.dp - ((34.dp - 26.dp) * distance)
+                val maxIcon = if (isActuallyCompact) 28.dp else 34.dp
+                val minIcon = if (isActuallyCompact) 22.dp else 26.dp
+                val iconSize = maxIcon - ((maxIcon - minIcon) * distance)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -676,27 +748,54 @@ fun FloatingBottomNavBar(
             }
         }
 
+        val ballOffsetX = indicatorOffset + (itemWidth - ballSize) / 2f
+        val ballOffsetY = (navBarHeight - ballSize) / 2f
+
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .offset(x = indicatorOffset)
                 .width(itemWidth)
-                .height(72.dp),
+                .height(navBarHeight),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(ballSize)
                     .clip(CircleShape)
                     .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    isSliderActive = event.changes.any { it.pressed }
+                                }
+                            } finally {
+                                isSliderActive = false
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
                         detectHorizontalDragGestures(
+                            onDragStart = {
+                                isSliderActive = true
+                            },
                             onDragEnd = {
+                                isSliderActive = false
+                                coroutineScope.launch {
+                                    val closestPage = (pagerState.currentPage + pagerState.currentPageOffsetFraction).roundToInt()
+                                    pagerState.animateScrollToPage(closestPage)
+                                }
+                            },
+                            onDragCancel = {
+                                isSliderActive = false
                                 coroutineScope.launch {
                                     val closestPage = (pagerState.currentPage + pagerState.currentPageOffsetFraction).roundToInt()
                                     pagerState.animateScrollToPage(closestPage)
                                 }
                             }
                         ) { change, dragAmount ->
+                            isSliderActive = true
                             change.consume()
                             val scrollAmount = dragAmount * (screenWidthPx / itemWidth.toPx())
                             coroutineScope.launch { pagerState.scrollBy(scrollAmount) }
@@ -710,9 +809,7 @@ fun FloatingBottomNavBar(
                             curve = 0.6f, dispersion = 0.15f, normalizedRadius = 0.5f
                         )
                     ) {
-                        val ballOffsetX = indicatorOffset.toPx() + (itemWidth.toPx() - 56.dp.toPx()) / 2f
-                        val ballOffsetY = (72.dp.toPx() - 56.dp.toPx()) / 2f
-                        translate(left = -glassOffset.x - ballOffsetX, top = -glassOffset.y - ballOffsetY) {
+                        translate(left = -glassOffset.x - ballOffsetX.toPx(), top = -glassOffset.y - ballOffsetY.toPx()) {
                             drawLayer(backgroundLayer)
                         }
                     }
@@ -727,7 +824,7 @@ fun FloatingBottomNavBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
+                .height(navBarHeight)
                 .graphicsLayer {
                     clip = true
                     shape = object : androidx.compose.ui.graphics.Shape {
@@ -738,7 +835,7 @@ fun FloatingBottomNavBar(
                         ): androidx.compose.ui.graphics.Outline {
                             val centerX = indicatorOffset.toPx() + (itemWidth.toPx() / 2f)
                             val centerY = size.height / 2f
-                            val radius = 28.dp.toPx()
+                            val radius = (ballSize / 2f).toPx()
                             return androidx.compose.ui.graphics.Outline.Generic(
                                 androidx.compose.ui.graphics.Path().apply {
                                     addOval(androidx.compose.ui.geometry.Rect(centerX - radius, centerY - radius, centerX + radius, centerY + radius))
@@ -756,7 +853,9 @@ fun FloatingBottomNavBar(
                 val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
                 screens.forEachIndexed { index, screen ->
                     val distance = kotlin.math.abs(position - index).coerceIn(0f, 1f)
-                    val iconSize = 34.dp - ((34.dp - 26.dp) * distance)
+                    val maxIcon = if (isActuallyCompact) 28.dp else 34.dp
+                    val minIcon = if (isActuallyCompact) 22.dp else 26.dp
+                    val iconSize = maxIcon - ((maxIcon - minIcon) * distance)
                     Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Icon(imageVector = screen.icon, contentDescription = null, tint = Color(0xFFDCB888), modifier = Modifier.size(iconSize))
                     }
