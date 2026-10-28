@@ -343,13 +343,13 @@ fun ClosetScreen(
                 var buttonOffset by remember { mutableStateOf(Offset.Zero) }
                 var isPressedInstant by remember { mutableStateOf(false) }
                 val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-                val buttonScale by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (isPressedInstant) 1.08f else 1f,
+                val saveButtonHeight by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isPressedInstant) 54.dp else 50.dp,
                     animationSpec = androidx.compose.animation.core.spring(
                         dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                         stiffness = 400f
                     ),
-                    label = "glassButtonScale"
+                    label = "glassButtonHeight"
                 )
 
                 val plannerDay = appState.plannerEditDay
@@ -368,28 +368,24 @@ fun ClosetScreen(
 
                         var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isRandomPressedInstant by remember { mutableStateOf(false) }
-                        val randomScale by androidx.compose.animation.core.animateFloatAsState(
-                            targetValue = if (isRandomPressedInstant) 1.08f else 1f,
+                        val randomSize by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = if (isRandomPressedInstant) 54.dp else 50.dp,
                             animationSpec = androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                                 stiffness = 400f
                             ),
-                            label = "randomButtonScale"
+                            label = "randomButtonSize"
                         )
                         
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(randomSize)
                                 .onGloballyPositioned { coords -> 
                                     if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                         try {
                                             randomButtonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
                                         } catch (e: Exception) {}
                                     }
-                                }
-                                .graphicsLayer {
-                                    scaleX = randomScale
-                                    scaleY = randomScale
                                 }
                                 .pointerInput(Unit) {
                                     awaitEachGesture {
@@ -420,14 +416,8 @@ fun ClosetScreen(
                                         normalizedRadius = 0.5f
                                     )
                                 ) {
-                                    scale(
-                                        scaleX = 1f / randomScale,
-                                        scaleY = 1f / randomScale,
-                                        pivot = center
-                                    ) {
-                                        translate(left = -randomButtonOffset.x, top = -randomButtonOffset.y) {
-                                            drawLayer(slidersLayer)
-                                        }
+                                    translate(left = -randomButtonOffset.x, top = -randomButtonOffset.y) {
+                                        drawLayer(slidersLayer)
                                     }
                                 }
                             } else {
@@ -454,12 +444,8 @@ fun ClosetScreen(
                     Box(
                         modifier = Modifier
                             .offset(y = saveOffsetY)
-                            .height(50.dp)
+                            .height(saveButtonHeight)
                             .zIndex(1f)
-                            .graphicsLayer {
-                                scaleX = buttonScale
-                                scaleY = buttonScale
-                            }
                             .onGloballyPositioned { coords -> 
                                 if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                     try {
@@ -504,14 +490,8 @@ fun ClosetScreen(
                                     normalizedRadius = 0.5f
                                 )
                             ) {
-                                scale(
-                                    scaleX = 1f / (buttonScale * buttonScale),
-                                    scaleY = 1f / (buttonScale * buttonScale),
-                                    pivot = center
-                                ) {
-                                    translate(left = -buttonOffset.x, top = -buttonOffset.y) {
-                                        drawLayer(slidersLayer)
-                                    }
+                                translate(left = -buttonOffset.x, top = -buttonOffset.y) {
+                                    drawLayer(slidersLayer)
                                 }
                             }
                         } else {
@@ -549,28 +529,24 @@ fun ClosetScreen(
                     ) {
                         var cancelButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isCancelPressedInstant by remember { mutableStateOf(false) }
-                        val cancelScale by androidx.compose.animation.core.animateFloatAsState(
-                            targetValue = if (isCancelPressedInstant) 1.08f else 1f,
+                        val cancelSize by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = if (isCancelPressedInstant) 54.dp else 50.dp,
                             animationSpec = androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                                 stiffness = 400f
                             ),
-                            label = "cancelButtonScale"
+                            label = "cancelButtonSize"
                         )
                         
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(cancelSize)
                                 .onGloballyPositioned { coords -> 
                                     if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                         try {
                                             cancelButtonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
                                         } catch (e: Exception) {}
                                     }
-                                }
-                                .graphicsLayer {
-                                    scaleX = cancelScale
-                                    scaleY = cancelScale
                                 }
                                 .pointerInput(Unit) {
                                     awaitEachGesture {
@@ -608,14 +584,8 @@ fun ClosetScreen(
                                         normalizedRadius = 0.5f
                                     )
                                 ) {
-                                    scale(
-                                        scaleX = 1f / cancelScale,
-                                        scaleY = 1f / cancelScale,
-                                        pivot = center
-                                    ) {
-                                        translate(left = -cancelButtonOffset.x, top = -cancelButtonOffset.y) {
-                                            drawLayer(slidersLayer)
-                                        }
+                                    translate(left = -cancelButtonOffset.x, top = -cancelButtonOffset.y) {
+                                        drawLayer(slidersLayer)
                                     }
                                 }
                             } else {

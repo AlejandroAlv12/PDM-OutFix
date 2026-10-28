@@ -39,6 +39,11 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import com.pdm0126.outfix.ui.liquidGlass
 import android.os.Build
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateContentSize
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -145,30 +150,53 @@ fun LaundryScreen(
         }
             }
             if (usedGarments.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 24.dp)
-                    .bouncyClickable {
-                        if (confirmVaciar) {
-                            laundryViewModel.markAllWashed(usedGarments)
-                            confirmVaciar = false
-                        } else {
-                            confirmVaciar = true
-                            confirmLavarGarmentId = null // Reset the other confirmation
+                var isVaciarPressedInstant by remember { mutableStateOf(false) }
+                val vaciarHeight by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isVaciarPressedInstant) 52.dp else 48.dp,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = 400f
+                    ),
+                    label = "vaciarButtonHeight"
+                )
+                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 24.dp)
+                        .height(vaciarHeight)
+                        .onGloballyPositioned { coords ->
+                            if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
+                                try {
+                                    buttonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
+                                } catch (e: Exception) {}
+                            }
                         }
-                    }
-                    .height(48.dp)
-                    .onGloballyPositioned { coords ->
-                        if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
-                            try {
-                                buttonOffset = rootCoords!!.localPositionOf(coords, Offset.Zero)
-                            } catch (e: Exception) {}
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                isVaciarPressedInstant = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                waitForUpOrCancellation()
+                                isVaciarPressedInstant = false
+                            }
                         }
-                    }
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (confirmVaciar) {
+                                laundryViewModel.markAllWashed(usedGarments)
+                                confirmVaciar = false
+                            } else {
+                                confirmVaciar = true
+                                confirmLavarGarmentId = null // Reset the other confirmation
+                            }
+                        }
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
                 if (Build.VERSION.SDK_INT >= 31) {
                     Canvas(
                         modifier = Modifier.matchParentSize().liquidGlass(

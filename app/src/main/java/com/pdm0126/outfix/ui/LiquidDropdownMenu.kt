@@ -320,11 +320,9 @@ fun LiquidWheelPickerOverlay(
                 cornerRadius = cornerRadiusDp,
                 tint = combinedTint
             )) {
-                scale(scaleX = 1f, scaleY = 1f, pivot = Offset(size.width / 2f, -visualTopYPx)) {
-                    if (screenCoords?.isAttached == true) {
-                        translate(left = -currentXPx, top = -(baseYOffsetPx + visualTopYPx)) {
-                            drawLayer(backgroundLayer)
-                        }
+                if (screenCoords?.isAttached == true) {
+                    translate(left = -currentXPx, top = -(baseYOffsetPx + visualTopYPx)) {
+                        drawLayer(backgroundLayer)
                     }
                 }
             }
@@ -474,11 +472,6 @@ fun LiquidDropdownOverlay(
     Box(
         modifier = Modifier
             .absoluteOffset(x = currentX, y = yOffset)
-            .graphicsLayer {
-                scaleX = menuScale
-                scaleY = menuScale
-                transformOrigin = TransformOrigin(0.5f, 0f)
-            }
             .clip(RoundedCornerShape(cornerRadius))
             .width(currentWidth)
             .layout { measurable, constraints ->
@@ -514,14 +507,12 @@ fun LiquidDropdownOverlay(
                         tint = combinedTint
                     )
             ) {
-                scale(scaleX = 1f / menuScale, scaleY = 1f / menuScale, pivot = Offset(size.width / 2f, 0f)) {
-                    if (screenCoords?.isAttached == true) {
-                        val screenPos = screenCoords!!.positionInRoot()
-                        val unscaledX = currentX.toPx()
-                        val unscaledY = yOffset.toPx()
-                        translate(left = -(unscaledX - screenPos.x), top = -(unscaledY - screenPos.y)) {
-                            drawLayer(backgroundLayer)
-                        }
+                if (screenCoords?.isAttached == true) {
+                    val screenPos = screenCoords!!.positionInRoot()
+                    val unscaledX = currentX.toPx()
+                    val unscaledY = yOffset.toPx()
+                    translate(left = -(unscaledX - screenPos.x), top = -(unscaledY - screenPos.y)) {
+                        drawLayer(backgroundLayer)
                     }
                 }
             }
@@ -535,6 +526,10 @@ fun LiquidDropdownOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(buttonHeight)
+                    .graphicsLayer {
+                        scaleX = menuScale
+                        scaleY = menuScale
+                    }
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)

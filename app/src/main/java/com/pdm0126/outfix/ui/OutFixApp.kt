@@ -394,22 +394,21 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             ) {
                 var isFabPressedInstant by remember { mutableStateOf(false) }
                 val hapticFb = androidx.compose.ui.platform.LocalHapticFeedback.current
-                val fabScale by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (isFabPressedInstant && !isFabExpanded) 1.08f else 1f,
+                val fabPressExtra by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isFabPressedInstant && !isFabExpanded) 6.dp else 0.dp,
                     animationSpec = androidx.compose.animation.core.spring(
                         dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                         stiffness = 400f
                     ),
-                    label = "fabGlassScale"
+                    label = "fabGlassPressExtra"
                 )
 
                 Box(
                     modifier = Modifier
-                        .size(width = fabWidth, height = fabHeight)
+                        .size(width = fabWidth + fabPressExtra, height = fabHeight + fabPressExtra)
                         .onGloballyPositioned { coords ->
                             if (pagerCoords != null) fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
                         }
-                        .graphicsLayer { scaleX = fabScale; scaleY = fabScale }
                         .pointerInput(!isFabExpanded) {
                             awaitEachGesture {
                                 awaitFirstDown(requireUnconsumed = false)
@@ -447,10 +446,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                                     curve = 0.5f, dispersion = 0.15f, normalizedRadius = fabNormalizedRadius
                                 )
                             ) {
-                                scale(scaleX = 1f / fabScale, scaleY = 1f / fabScale, pivot = center) {
-                                    translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
-                                        drawLayer(backgroundLayer)
-                                    }
+                                translate(left = -fabGlassOffset.x, top = -fabGlassOffset.y) {
+                                    drawLayer(backgroundLayer)
                                 }
                             }
                         } else {

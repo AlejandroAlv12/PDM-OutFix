@@ -304,40 +304,33 @@ fun DayCard(
     
         AnimatedVisibility(
             visible = isEditing,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(androidx.compose.animation.core.tween(200)) + androidx.compose.animation.scaleIn(
+                initialScale = 0.5f,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = 400f
+                )
+            ),
+            exit = fadeOut(androidx.compose.animation.core.tween(150)) + androidx.compose.animation.scaleOut(
+                targetScale = 0.5f,
+                animationSpec = androidx.compose.animation.core.tween(150)
+            ),
             modifier = Modifier.align(Alignment.Center)
         ) {
-            val entranceScale by transition.animateFloat(
-                transitionSpec = { androidx.compose.animation.core.spring(
-                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                    stiffness = 400f
-                ) },
-                label = "entranceScale"
-            ) { state ->
-                if (state == androidx.compose.animation.EnterExitState.Visible) 1f else 0.01f
-            }
-
             var isPressedInstant by remember { mutableStateOf(false) }
-            val buttonScale by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isPressedInstant) 1.08f else 1f,
+            val buttonSize by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isPressedInstant) 60.dp else 56.dp,
                 animationSpec = androidx.compose.animation.core.spring(
                     dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                     stiffness = 400f
                 ),
-                label = "editButtonScale"
+                label = "editButtonSize"
             )
-            
-            val totalScale = entranceScale * buttonScale
-            
+
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(buttonSize)
                     .onGloballyPositioned { buttonCoords = it }
-                    .graphicsLayer {
-                        scaleX = totalScale
-                        scaleY = totalScale
-                    }
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
@@ -364,16 +357,10 @@ fun DayCard(
                             normalizedRadius = 0.5f
                         )
                     ) {
-                        scale(
-                            scaleX = 1f / totalScale,
-                            scaleY = 1f / totalScale,
-                            pivot = center
-                        ) {
-                            if (rootCoords != null && buttonCoords != null && rootCoords!!.isAttached && buttonCoords!!.isAttached) {
-                                val offset = rootCoords!!.localPositionOf(buttonCoords!!, Offset.Zero)
-                                translate(left = -offset.x, top = -offset.y) {
-                                    drawLayer(cardLayer)
-                                }
+                        if (rootCoords != null && buttonCoords != null && rootCoords!!.isAttached && buttonCoords!!.isAttached) {
+                            val offset = rootCoords!!.localPositionOf(buttonCoords!!, Offset.Zero)
+                            translate(left = -offset.x, top = -offset.y) {
+                                drawLayer(cardLayer)
                             }
                         }
                     }
@@ -385,7 +372,7 @@ fun DayCard(
                     imageVector = Icons.Rounded.Edit,
                     contentDescription = "Edit Day",
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
