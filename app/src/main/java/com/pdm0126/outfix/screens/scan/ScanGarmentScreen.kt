@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,29 +88,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
-fun getLatestGalleryImageUri(context: Context): Uri? {
-    val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-    } else {
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-    }
-
-    val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_ADDED)
-    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-
-    try {
-        context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                val id = cursor.getLong(idColumn)
-                return ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-            }
-        }
-    } catch (e: Exception) {
-        Log.e("ScanGarmentScreen", "Failed to fetch gallery image", e)
-    }
-    return null
-}
 
 data class TrackingData(
     val boundingBox: android.graphics.Rect,
@@ -189,27 +167,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val permissionsToRequest = remember {
-        mutableListOf(Manifest.permission.CAMERA).apply {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                add(Manifest.permission.READ_MEDIA_IMAGES)
-            } else {
-                add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-        }.toTypedArray()
-    }
-
     var hasCameraPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-    }
-    var hasMediaPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-            } else {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            }
-        )
     }
 
     var latestGalleryUri by remember { mutableStateOf<Uri?>(null) }
@@ -232,16 +191,10 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
 
     val imageCapture = remember { ImageCapture.Builder().build() }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-        onResult = { permissions ->
-            hasCameraPermission = permissions[Manifest.permission.CAMERA] ?: hasCameraPermission
-            val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                Manifest.permission.READ_MEDIA_IMAGES
-            } else {
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            }
-            hasMediaPermission = permissions[mediaPermission] ?: hasMediaPermission
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasCameraPermission = isGranted
         }
     )
 
@@ -307,14 +260,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
     )
 
     LaunchedEffect(Unit) {
-        if (!hasCameraPermission || !hasMediaPermission) {
-            permissionLauncher.launch(permissionsToRequest)
-        }
-    }
-
-    LaunchedEffect(hasMediaPermission) {
-        if (hasMediaPermission) {
-            latestGalleryUri = getLatestGalleryImageUri(context)
+        if (!hasCameraPermission) {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -724,7 +671,8 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                 .size(56.dp)
                                 .bouncyClickable { galleryLauncher.launch("image/*") }
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFFBDBDBD))
+                                .background(Color(0xFFBDBDBD)),
+                            contentAlignment = Alignment.Center
                         ) {
                             if (latestGalleryUri != null) {
                                 AsyncImage(
@@ -732,6 +680,13 @@ fun ScanGarmentScreen(onClose: () -> Unit, onImageCaptured: (String, String, Lis
                                     contentDescription = "Última foto",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Rounded.Add,
+                                    contentDescription = "Galería",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             }
                         }

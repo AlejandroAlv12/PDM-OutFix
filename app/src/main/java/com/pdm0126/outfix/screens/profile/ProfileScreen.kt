@@ -93,20 +93,113 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            var showDeleteAccountDialog by remember { mutableStateOf(false) }
+            var showPrivacyDialog by remember { mutableStateOf(false) }
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(if (hasSession) 0.5f else 1f)
-                    .height(56.dp)
+                    .fillMaxWidth(if (hasSession) 0.55f else 0.85f)
+                    .height(54.dp)
                     .bouncyClickable { if (hasSession) onLogoutClick() else onShowAuth() }
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (hasSession) Color(0xFFFF0000).copy(alpha = 0.5f) else Color(0xFF2B5EA0).copy(alpha = 0.5f)),
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (hasSession) Color(0xFFFF4D4F).copy(alpha = 0.85f) else Color(0xFF2B5EA0).copy(alpha = 0.85f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (hasSession) "Cerrar Sesión" else "Iniciar Sesión",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (hasSession) {
+                Spacer(modifier = Modifier.height(14.dp))
+                TextButton(onClick = { showDeleteAccountDialog = true }) {
+                    Text(
+                        text = "Eliminar cuenta",
+                        color = Color(0xFFE53935),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = { showPrivacyDialog = true }) {
+                Text(
+                    text = "Política de Privacidad",
+                    color = Color.Gray,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            if (showDeleteAccountDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteAccountDialog = false },
+                    title = {
+                        Text(
+                            text = "Eliminar cuenta",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE53935)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "¿Estás seguro de que deseas eliminar tu cuenta y todos tus datos? Esta acción es irreversible y eliminará tu guardarropa y preferencias.",
+                            color = Color.DarkGray
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.deleteAccount {
+                                    showDeleteAccountDialog = false
+                                }
+                            }
+                        ) {
+                            Text("Eliminar definitivamente", color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteAccountDialog = false }) {
+                            Text("Cancelar", color = Color.Gray)
+                        }
+                    }
+                )
+            }
+
+            if (showPrivacyDialog) {
+                AlertDialog(
+                    onDismissRequest = { showPrivacyDialog = false },
+                    title = {
+                        Text(
+                            text = "Política de Privacidad",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    },
+                    text = {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "OutFix valora y respeta tu privacidad:\n\n" +
+                                        "• Cámara: Se utiliza exclusivamente para capturar prendas que tú decidas registrar.\n" +
+                                        "• Datos y Prendas: Tu catálogo se almacena de forma local y se sincroniza únicamente con tu cuenta personal.\n" +
+                                        "• Información Personal: Tu correo y nombre se emplean únicamente para autenticación.\n" +
+                                        "• No compartimos ni vendemos tu información a terceros.\n\n" +
+                                        "Puedes eliminar tu cuenta y todos tus datos en cualquier momento desde esta pantalla.",
+                                fontSize = 13.sp,
+                                color = Color(0xFF333333),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showPrivacyDialog = false }) {
+                            Text("Entendido", color = Color(0xFF2B5EA0), fontWeight = FontWeight.Bold)
+                        }
+                    }
                 )
             }
             
