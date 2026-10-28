@@ -5,5 +5,6 @@ enum class MenuState {
     MENU,       
     LENT_LIST,  
     ADD_LENT,   
-    LENT_DETAIL 
+    LENT_DETAIL,
+    SETTINGS
 }

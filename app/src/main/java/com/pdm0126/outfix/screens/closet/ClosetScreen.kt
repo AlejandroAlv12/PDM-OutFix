@@ -60,6 +60,7 @@ fun ClosetScreen(
     closetViewModel: ClosetViewModel = hiltViewModel()
 ) {
     val appState by appViewModel.uiState.collectAsState()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
     val uiState by closetViewModel.uiState.collectAsState()
     val garments by closetViewModel.garments.collectAsState()
     val plannerDays by closetViewModel.plannerDays.collectAsState()
@@ -70,7 +71,7 @@ fun ClosetScreen(
     val selectedHead = uiState.selectedHead
     val selectedAccessories = uiState.selectedAccessories
     val hasChanges = uiState.hasChanges
-    val isLoading = uiState.isLoading
+    val isSyncing = uiState.isSyncing
 
     val currentDayOfWeek = remember { java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) }
     var isClosingEditor by remember { mutableStateOf(false) }
@@ -91,11 +92,14 @@ fun ClosetScreen(
         appViewModel.setFabVisible(appState.plannerEditDay == null)
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = LimeGreen)
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isSyncing) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 27.dp, end = 35.dp).size(24.dp).zIndex(100f),
+                color = LimeGreen,
+                strokeWidth = 2.dp
+            )
         }
-    } else {
         val slidersLayer = rememberGraphicsLayer()
         var rootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
         
@@ -189,6 +193,12 @@ fun ClosetScreen(
                     label = "topSpacerHeight"
                 )
                 Spacer(modifier = Modifier.height(topSpacerHeight))
+
+                if (garments.isEmpty()) {
+                    SkeletonCategorySlider("superior")
+                    SkeletonCategorySlider("inferior")
+                    SkeletonCategorySlider("calzado")
+                }
 
                 val isDressSelected = selectedTop?.category?.equals("Vestido", ignoreCase = true) == true
                 
@@ -406,7 +416,7 @@ fun ClosetScreen(
                             if (android.os.Build.VERSION.SDK_INT >= 31) {
                                 androidx.compose.foundation.Canvas(
                                     modifier = Modifier.matchParentSize().liquidGlass(
-                                        blur = 12f,
+                                        blur = liquidBlur,
                                         saturation = 1.2f,
                                         refraction = 0.5f,
                                         curve = 0.5f,
@@ -490,7 +500,7 @@ fun ClosetScreen(
                         if (android.os.Build.VERSION.SDK_INT >= 31) {
                             androidx.compose.foundation.Canvas(
                                 modifier = Modifier.matchParentSize().liquidGlass(
-                                    blur = 12f,
+                                    blur = liquidBlur,
                                     saturation = 1.2f,
                                     refraction = 0.5f,
                                     curve = 0.5f,
@@ -594,7 +604,7 @@ fun ClosetScreen(
                             if (android.os.Build.VERSION.SDK_INT >= 31) {
                                 androidx.compose.foundation.Canvas(
                                     modifier = Modifier.matchParentSize().liquidGlass(
-                                        blur = 12f,
+                                        blur = liquidBlur,
                                         saturation = 1.2f,
                                         refraction = 0.5f,
                                         curve = 0.5f,
@@ -809,6 +819,40 @@ fun UnifiedAccessoryRow(accessories: List<GarmentResponse>, modifier: Modifier =
                         modifier = Modifier.fillMaxSize().padding(2.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SkeletonCategorySlider(title: String) {
+    val titleCapitalized = title.replaceFirstChar { it.uppercase() }
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(120.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.LightGray.copy(alpha = 0.5f))
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp, 120.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.LightGray.copy(alpha = 0.5f))
+                )
             }
         }
     }

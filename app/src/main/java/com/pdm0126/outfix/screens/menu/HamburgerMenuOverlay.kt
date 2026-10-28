@@ -78,15 +78,16 @@ fun HamburgerMenuOverlay(
         }
     }
 
+    LaunchedEffect(Unit) { menuViewModel.refresh() }
+
     androidx.activity.compose.BackHandler(enabled = isOpen) {
         when (menuState) {
             MenuState.MENU -> appViewModel.closeHamburgerMenu()
             MenuState.LENT_LIST -> menuViewModel.navigateTo(MenuState.MENU)
             MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuViewModel.navigateTo(MenuState.LENT_LIST)
+            MenuState.SETTINGS -> menuViewModel.navigateTo(MenuState.MENU)
         }
     }
-
-    LaunchedEffect(Unit) { menuViewModel.refresh() }
 
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val density = androidx.compose.ui.platform.LocalDensity.current.density
@@ -123,7 +124,11 @@ fun HamburgerMenuOverlay(
         label = "panelWidth"
     )
     val panelHeightFraction by animateFloatAsState(
-        targetValue = if (isExpanded) 0.88f else 0.56f,
+        targetValue = when (menuState) {
+            MenuState.SETTINGS -> 0.72f
+            MenuState.MENU -> 0.56f
+            else -> 0.88f
+        },
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "panelHeight"
     )
@@ -145,6 +150,7 @@ fun HamburgerMenuOverlay(
                             MenuState.MENU -> appViewModel.closeHamburgerMenu()
                             MenuState.LENT_LIST -> menuViewModel.navigateTo(MenuState.MENU)
                             MenuState.ADD_LENT, MenuState.LENT_DETAIL -> menuViewModel.navigateTo(MenuState.LENT_LIST)
+                            MenuState.SETTINGS -> menuViewModel.navigateTo(MenuState.MENU)
                         }
                     }
                 )
@@ -185,9 +191,11 @@ fun HamburgerMenuOverlay(
                     },
                     label = "menuStateTransition"
                 ) { state ->
+                    val liquidBlur by appViewModel.liquidBlur.collectAsState()
                     when (state) {
                         MenuState.MENU -> MenuPanel(
                             onPrestadosClick = { menuViewModel.navigateTo(MenuState.LENT_LIST) },
+                            onSettingsClick = { menuViewModel.navigateTo(MenuState.SETTINGS) },
                             onClose = { appViewModel.closeHamburgerMenu() }
                         )
                         MenuState.LENT_LIST -> LentListPanel(
@@ -225,6 +233,11 @@ fun HamburgerMenuOverlay(
                             onReturned = { item ->
                                 menuViewModel.markReturned(item) { cancelReclaimNotification(context, item.id) }
                             }
+                        )
+                        MenuState.SETTINGS -> SettingsPanel(
+                            currentBlur = liquidBlur,
+                            onBlurChange = { appViewModel.setLiquidBlur(it) },
+                            onBack = { menuViewModel.navigateTo(MenuState.MENU) }
                         )
                     }
                 }

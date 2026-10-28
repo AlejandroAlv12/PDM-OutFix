@@ -36,6 +36,7 @@ import java.util.*
 @Composable
 fun MenuPanel(
     onPrestadosClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -70,8 +71,15 @@ fun MenuPanel(
         Box {
             MenuOptionRow(label = "About US", onClick = { /* TODO */ })
         }
+        HorizontalDivider(
+            color = Color.LightGray.copy(alpha = 0.4f)
+        )
+        Box {
+            MenuOptionRow(label = "Ajustes", onClick = onSettingsClick)
+        }
     }
 }
+
 
 @Composable
 fun MenuOptionRow(label: String, onClick: () -> Unit) {

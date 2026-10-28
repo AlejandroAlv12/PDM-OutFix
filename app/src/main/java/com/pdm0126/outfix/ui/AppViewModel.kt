@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.pdm0126.outfix.data.api.dto.GarmentResponse
 import com.pdm0126.outfix.data.local.LentItem
 import com.pdm0126.outfix.data.model.DayInfo
+import com.pdm0126.outfix.data.prefs.SettingsRepository
 import com.pdm0126.outfix.data.repository.GarmentRepository
 import com.pdm0126.outfix.data.repository.PlannerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,8 +57,15 @@ data class AppUiState(
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val garmentRepository: GarmentRepository,
-    private val plannerRepository: PlannerRepository
+    private val plannerRepository: PlannerRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val liquidBlur: StateFlow<Float> = settingsRepository.liquidBlur
+
+    fun setLiquidBlur(value: Float) {
+        settingsRepository.setLiquidBlur(value)
+    }
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()

@@ -28,7 +28,7 @@ data class ClosetUiState(
     val originalShoes: GarmentResponse? = null,
     val originalHead: GarmentResponse? = null,
     val originalAccessories: List<GarmentResponse> = emptyList(),
-    val isLoading: Boolean = false,
+    val isSyncing: Boolean = false,
 )
 
 val ClosetUiState.hasChanges: Boolean
@@ -55,9 +55,9 @@ class ClosetViewModel @Inject constructor(
 
     fun refreshGarments() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isSyncing = true) }
             garmentRepository.refreshGarments()
-            _uiState.update { it.copy(isLoading = false) }
+            _uiState.update { it.copy(isSyncing = false) }
         }
     }
 

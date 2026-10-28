@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlin.math.roundToInt
 
 @Composable
@@ -140,6 +141,9 @@ fun LiquidWheelPickerOverlay(
     selectedItem: String,
     onItemSelected: (String) -> Unit
 ) {
+    val appViewModel: AppViewModel = hiltViewModel()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
+
     val menuProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
@@ -148,8 +152,6 @@ fun LiquidWheelPickerOverlay(
 
     val showOverlay = isExpanded || (menuProgress > 0f)
     if (!showOverlay || buttonCoords?.isAttached != true) return
-
-    // Full screen box moved down
 
     val density = LocalDensity.current
     val buttonWidthPx = with(density) { buttonCoords.size.width.toFloat() }
@@ -309,7 +311,7 @@ fun LiquidWheelPickerOverlay(
 
         if (Build.VERSION.SDK_INT >= 31) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize().liquidGlass(
-                blur = 30f,
+                blur = liquidBlur,
                 saturation = 1.4f,
                 refraction = 0.5f,
                 curve = 0.05f,
@@ -428,6 +430,9 @@ fun LiquidDropdownOverlay(
     selectedItem: String,
     onItemSelected: (String) -> Unit
 ) {
+    val appViewModel: AppViewModel = hiltViewModel()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
+
     val menuProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
@@ -499,7 +504,7 @@ fun LiquidDropdownOverlay(
                 modifier = Modifier
                     .matchParentSize()
                     .liquidGlass(
-                        blur = 30f,
+                        blur = liquidBlur,
                         saturation = 1.4f,
                         refraction = 0.5f,
                         curve = 0.05f,

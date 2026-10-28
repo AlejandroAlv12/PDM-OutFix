@@ -55,6 +55,7 @@ fun WeeklyPlannerScreen(
     plannerViewModel: PlannerViewModel = hiltViewModel()
 ) {
     val appState by appViewModel.uiState.collectAsState()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
     val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
     var editingDay by remember { mutableStateOf<String?>(null) }
     val daysList by plannerViewModel.plannerDays.collectAsState()
@@ -108,7 +109,8 @@ fun WeeklyPlannerScreen(
                     onLongClick = { bounds, textBounds, charBounds ->
                         appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                         editingDay = null
-                    }
+                    },
+                    liquidBlur = liquidBlur
                 )
             }
         }
@@ -147,7 +149,8 @@ fun WeeklyPlannerScreen(
                     onLongClick = { bounds, textBounds, charBounds ->
                         appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                         editingDay = null
-                    }
+                    },
+                    liquidBlur = liquidBlur
                 )
             }
         }
@@ -186,7 +189,8 @@ fun WeeklyPlannerScreen(
                 onLongClick = { bounds, textBounds, charBounds ->
                     appViewModel.showDayDetail(d, bounds, textBounds, charBounds)
                     editingDay = null
-                }
+                },
+                liquidBlur = liquidBlur
             )
             }
         }
@@ -211,7 +215,8 @@ fun DayCard(
     onOpenTarget: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null,
     onClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onLongClick: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null
+    onLongClick: ((androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect, androidx.compose.ui.geometry.Rect) -> Unit)? = null,
+    liquidBlur: Float = 12f
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val cardLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
@@ -349,7 +354,7 @@ fun DayCard(
                 if (android.os.Build.VERSION.SDK_INT >= 31) {
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier.matchParentSize().liquidGlass(
-                            blur = 5f,
+                            blur = liquidBlur,
                             saturation = 1.2f,
                             refraction = 0.5f,
                             curve = 0.5f,

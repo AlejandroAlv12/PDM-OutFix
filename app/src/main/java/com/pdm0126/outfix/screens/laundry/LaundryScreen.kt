@@ -53,6 +53,7 @@ fun LaundryScreen(
 ) {
     val allGarments by laundryViewModel.garments.collectAsState()
     val plannerDays by laundryViewModel.plannerDays.collectAsState()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
 
     val currentDayOfWeek = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) }
     
@@ -171,7 +172,7 @@ fun LaundryScreen(
                 if (Build.VERSION.SDK_INT >= 31) {
                     Canvas(
                         modifier = Modifier.matchParentSize().liquidGlass(
-                            blur = 12f,
+                            blur = liquidBlur,
                             saturation = 1.2f,
                             refraction = 0.5f,
                             curve = 0.5f,

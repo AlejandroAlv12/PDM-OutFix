@@ -29,7 +29,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloat
 import androidx.hilt.navigation.compose.hiltViewModel
-
 @Composable
 fun ProfileScreen(
     onLogoutClick: () -> Unit, 
@@ -122,7 +121,8 @@ fun LogoutDialogOverlay(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     appBackgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
-    pagerCoords: LayoutCoordinates?
+    pagerCoords: LayoutCoordinates?,
+    liquidBlur: Float = 12f
 ) {
     var exitDirection by remember { mutableStateOf(1f) }
 
@@ -182,7 +182,7 @@ fun LogoutDialogOverlay(
                         modifier = Modifier
                             .matchParentSize()
                             .liquidGlass(
-                                blur = 30f,
+                                blur = liquidBlur,
                                 refraction = 0.9f,
                                 saturation = 0.5f,
                                 edge = 1.5f,

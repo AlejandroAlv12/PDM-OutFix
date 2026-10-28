@@ -100,6 +100,7 @@ enum class OutFixScreen(val title: String, val icon: ImageVector) : NavKey {
 fun MainScreen(onLogout: () -> Unit = {}) {
     val appViewModel: AppViewModel = hiltViewModel()
     val appState by appViewModel.uiState.collectAsState()
+    val liquidBlur by appViewModel.liquidBlur.collectAsState()
 
     val screens = OutFixScreen.entries
     val navigationState = rememberNavigationState(
@@ -296,6 +297,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                             pagerState = pagerState,
                             backgroundLayer = backgroundLayer,
                             pagerCoords = pagerCoords,
+                            liquidBlur = liquidBlur,
                             onItemSelected = { screen -> navigator.navigate(screen) }
                         )
                     }
@@ -411,7 +413,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                         if (Build.VERSION.SDK_INT >= 31) {
                             androidx.compose.foundation.Canvas(
                                 modifier = Modifier.fillMaxSize().liquidGlass(
-                                    blur = 12f, saturation = 1.2f, refraction = 0.5f,
+                                    blur = liquidBlur, saturation = 1.2f, refraction = 0.5f,
                                     curve = 0.5f, dispersion = 0.15f, normalizedRadius = fabNormalizedRadius
                                 )
                             ) {
@@ -567,7 +569,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
             onDismiss = { showLogoutDialog = false },
             onConfirm = { showLogoutDialog = false; onLogout() },
             appBackgroundLayer = backgroundLayer,
-            pagerCoords = pagerCoords
+            pagerCoords = pagerCoords,
+            liquidBlur = liquidBlur
         )
     }
 }
@@ -579,6 +582,7 @@ fun FloatingBottomNavBar(
     pagerState: PagerState,
     backgroundLayer: androidx.compose.ui.graphics.layer.GraphicsLayer,
     pagerCoords: LayoutCoordinates?,
+    liquidBlur: Float = 12f,
     onItemSelected: (OutFixScreen) -> Unit
 ) {
     var glassOffset by remember { mutableStateOf(Offset.Zero) }
@@ -614,7 +618,7 @@ fun FloatingBottomNavBar(
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .liquidGlass(blur = 18f, saturation = 1.5f, refraction = 0.55f, curve = 0.50f, dispersion = 0.25f)
+                        .liquidGlass(blur = liquidBlur, saturation = 1.5f, refraction = 0.55f, curve = 0.50f, dispersion = 0.25f)
                 ) {
                     translate(left = -glassOffset.x, top = -glassOffset.y) { drawLayer(backgroundLayer) }
                 }
@@ -696,7 +700,7 @@ fun FloatingBottomNavBar(
                 if (Build.VERSION.SDK_INT >= 31) {
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier.fillMaxSize().liquidGlass(
-                            blur = 10f, saturation = 1.5f, refraction = 0.8f,
+                            blur = liquidBlur, saturation = 1.5f, refraction = 0.8f,
                             curve = 0.6f, dispersion = 0.15f, normalizedRadius = 0.5f
                         )
                     ) {
