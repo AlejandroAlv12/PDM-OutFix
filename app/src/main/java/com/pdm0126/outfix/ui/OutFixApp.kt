@@ -354,10 +354,16 @@ fun MainScreen(onLogout: () -> Unit = {}) {
 
             androidx.compose.animation.AnimatedVisibility(
                 visible = (isHome && appState.isFabVisible) || isFabExpanded,
-                enter = androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
-                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
-                exit = androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutLinearInEasing)) +
-                       androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(350)),
+                enter = androidx.compose.animation.scaleIn(
+                    initialScale = 0f,
+                    animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                exit = androidx.compose.animation.scaleOut(
+                    targetScale = 0f,
+                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+                ) + androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 1, delayMillis = 250)
+                ),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = fabPaddingEnd, bottom = fabPaddingBottom)
