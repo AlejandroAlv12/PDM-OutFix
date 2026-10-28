@@ -614,7 +614,8 @@ fun ClosetScreen(
                 screenCoords = rootCoords,
                 items = dropdownItems,
                 selectedItem = dropdownSelected,
-                onItemSelected = dropdownOnSelect
+                onItemSelected = dropdownOnSelect,
+                blur = 15f
             )
         }
     }

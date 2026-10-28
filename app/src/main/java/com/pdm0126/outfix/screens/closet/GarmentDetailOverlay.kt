@@ -498,7 +498,8 @@ fun GarmentDetailOverlay(
                 onItemSelected = {
                     selectedCategory = it
                     showCategoryMenu = false
-                }
+                },
+                blur = 15f
             )
         } // Close outer Box
 

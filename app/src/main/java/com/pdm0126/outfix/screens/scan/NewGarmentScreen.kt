@@ -440,7 +440,8 @@ fun NewGarmentScreen(
             onItemSelected = { 
                 selectedCategory = it
                 showCategoryMenu = false 
-            }
+            },
+            blur = 15f
         )
 
         }

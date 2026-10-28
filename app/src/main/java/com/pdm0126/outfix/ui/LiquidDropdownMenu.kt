@@ -139,10 +139,10 @@ fun LiquidWheelPickerOverlay(
     screenCoords: LayoutCoordinates?,
     items: List<String>,
     selectedItem: String,
-    onItemSelected: (String) -> Unit
+    onItemSelected: (String) -> Unit,
+    blur: Float = 15f
 ) {
     val appViewModel: AppViewModel = hiltViewModel()
-    val liquidBlur by appViewModel.liquidBlur.collectAsState()
 
     val menuProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
@@ -311,7 +311,7 @@ fun LiquidWheelPickerOverlay(
 
         if (Build.VERSION.SDK_INT >= 31) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize().liquidGlass(
-                blur = liquidBlur,
+                blur = blur,
                 saturation = 1.4f,
                 refraction = 0.5f,
                 curve = 0.05f,
@@ -426,10 +426,10 @@ fun LiquidDropdownOverlay(
     screenCoords: LayoutCoordinates?,
     items: List<String>,
     selectedItem: String,
-    onItemSelected: (String) -> Unit
+    onItemSelected: (String) -> Unit,
+    blur: Float = 15f
 ) {
     val appViewModel: AppViewModel = hiltViewModel()
-    val liquidBlur by appViewModel.liquidBlur.collectAsState()
 
     val menuProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
@@ -497,7 +497,7 @@ fun LiquidDropdownOverlay(
                 modifier = Modifier
                     .matchParentSize()
                     .liquidGlass(
-                        blur = liquidBlur,
+                        blur = blur,
                         saturation = 1.4f,
                         refraction = 0.5f,
                         curve = 0.05f,
