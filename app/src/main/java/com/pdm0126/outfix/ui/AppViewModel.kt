@@ -200,6 +200,7 @@ class AppViewModel @Inject constructor(
     fun initializeApp() {
         viewModelScope.launch {
             plannerRepository.restorePlannerDays()
+            garmentRepository.refreshGarments()
         }
     }
 

@@ -72,7 +72,7 @@ fun ClosetScreen(
     val selectedHead = uiState.selectedHead
     val selectedAccessories = uiState.selectedAccessories
     val hasChanges = uiState.hasChanges
-    val isSyncing = uiState.isSyncing
+    val syncNotification by closetViewModel.syncNotification.collectAsState()
 
     val currentDayOfWeek = remember { java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) }
     var isClosingEditor by remember { mutableStateOf(false) }
@@ -90,12 +90,40 @@ fun ClosetScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isSyncing) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.TopEnd).padding(top = 27.dp, end = 35.dp).size(24.dp).zIndex(100f),
-                color = LimeGreen,
-                strokeWidth = 2.dp
-            )
+        androidx.compose.animation.AnimatedVisibility(
+            visible = syncNotification != null,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it },
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 22.dp)
+                .zIndex(200f)
+        ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = Color(0xFF1E2124).copy(alpha = 0.94f),
+                shadowElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, LimeGreen.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CloudDone,
+                        contentDescription = "Sincronizado",
+                        tint = LimeGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = syncNotification ?: "Sincronizado",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
         val slidersLayer = rememberGraphicsLayer()
         var rootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }

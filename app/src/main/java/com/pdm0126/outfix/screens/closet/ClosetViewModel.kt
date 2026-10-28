@@ -53,11 +53,11 @@ class ClosetViewModel @Inject constructor(
     val plannerDays: StateFlow<List<DayInfo>> = plannerRepository.plannerDaysFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val syncNotification: StateFlow<String?> = garmentRepository.syncNotification
+
     fun refreshGarments() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSyncing = true) }
             garmentRepository.refreshGarments()
-            _uiState.update { it.copy(isSyncing = false) }
         }
     }
 
