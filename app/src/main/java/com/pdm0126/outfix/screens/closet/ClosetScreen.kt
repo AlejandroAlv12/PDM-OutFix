@@ -39,6 +39,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.drawscope.scale
 import com.pdm0126.outfix.ui.liquidGlass
+import com.pdm0126.outfix.ui.growCentered
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -343,13 +344,13 @@ fun ClosetScreen(
                 var buttonOffset by remember { mutableStateOf(Offset.Zero) }
                 var isPressedInstant by remember { mutableStateOf(false) }
                 val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-                val saveButtonHeight by androidx.compose.animation.core.animateDpAsState(
-                    targetValue = if (isPressedInstant) 54.dp else 50.dp,
+                val savePressExtra by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isPressedInstant) 3.dp else 0.dp,
                     animationSpec = androidx.compose.animation.core.spring(
                         dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                         stiffness = 400f
                     ),
-                    label = "glassButtonHeight"
+                    label = "savePressExtra"
                 )
 
                 val plannerDay = appState.plannerEditDay
@@ -368,18 +369,19 @@ fun ClosetScreen(
 
                         var randomButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isRandomPressedInstant by remember { mutableStateOf(false) }
-                        val randomSize by androidx.compose.animation.core.animateDpAsState(
-                            targetValue = if (isRandomPressedInstant) 54.dp else 50.dp,
+                        val randomPressExtra by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = if (isRandomPressedInstant) 3.dp else 0.dp,
                             animationSpec = androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                                 stiffness = 400f
                             ),
-                            label = "randomButtonSize"
+                            label = "randomPressExtra"
                         )
                         
                         Box(
                             modifier = Modifier
-                                .size(randomSize)
+                                .growCentered(randomPressExtra)
+                                .size(50.dp + randomPressExtra * 2)
                                 .onGloballyPositioned { coords -> 
                                     if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                         try {
@@ -444,7 +446,8 @@ fun ClosetScreen(
                     Box(
                         modifier = Modifier
                             .offset(y = saveOffsetY)
-                            .height(saveButtonHeight)
+                            .growCentered(savePressExtra)
+                            .height(50.dp + savePressExtra * 2)
                             .zIndex(1f)
                             .onGloballyPositioned { coords -> 
                                 if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
@@ -503,7 +506,7 @@ fun ClosetScreen(
                             modifier = Modifier
                                 .animateContentSize(animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = 400f))
                                 .fillMaxHeight()
-                                .padding(horizontal = 24.dp),
+                                .padding(horizontal = 24.dp + savePressExtra),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -529,18 +532,19 @@ fun ClosetScreen(
                     ) {
                         var cancelButtonOffset by remember { mutableStateOf(Offset.Zero) }
                         var isCancelPressedInstant by remember { mutableStateOf(false) }
-                        val cancelSize by androidx.compose.animation.core.animateDpAsState(
-                            targetValue = if (isCancelPressedInstant) 54.dp else 50.dp,
+                        val cancelPressExtra by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = if (isCancelPressedInstant) 3.dp else 0.dp,
                             animationSpec = androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                                 stiffness = 400f
                             ),
-                            label = "cancelButtonSize"
+                            label = "cancelPressExtra"
                         )
                         
                         Box(
                             modifier = Modifier
-                                .size(cancelSize)
+                                .growCentered(cancelPressExtra)
+                                .size(50.dp + cancelPressExtra * 2)
                                 .onGloballyPositioned { coords -> 
                                     if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                         try {

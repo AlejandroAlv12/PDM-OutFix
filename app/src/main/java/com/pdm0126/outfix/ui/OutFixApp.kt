@@ -395,7 +395,7 @@ fun MainScreen(onLogout: () -> Unit = {}) {
                 var isFabPressedInstant by remember { mutableStateOf(false) }
                 val hapticFb = androidx.compose.ui.platform.LocalHapticFeedback.current
                 val fabPressExtra by androidx.compose.animation.core.animateDpAsState(
-                    targetValue = if (isFabPressedInstant && !isFabExpanded) 6.dp else 0.dp,
+                    targetValue = if (isFabPressedInstant && !isFabExpanded) 3.dp else 0.dp,
                     animationSpec = androidx.compose.animation.core.spring(
                         dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                         stiffness = 400f
@@ -405,7 +405,8 @@ fun MainScreen(onLogout: () -> Unit = {}) {
 
                 Box(
                     modifier = Modifier
-                        .size(width = fabWidth + fabPressExtra, height = fabHeight + fabPressExtra)
+                        .growCentered(fabPressExtra)
+                        .size(width = fabWidth + fabPressExtra * 2, height = fabHeight + fabPressExtra * 2)
                         .onGloballyPositioned { coords ->
                             if (pagerCoords != null) fabGlassOffset = pagerCoords!!.localPositionOf(coords, Offset.Zero)
                         }

@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import com.pdm0126.outfix.ui.liquidGlass
+import com.pdm0126.outfix.ui.growCentered
 import android.os.Build
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -151,13 +152,13 @@ fun LaundryScreen(
             }
             if (usedGarments.isNotEmpty()) {
                 var isVaciarPressedInstant by remember { mutableStateOf(false) }
-                val vaciarHeight by androidx.compose.animation.core.animateDpAsState(
-                    targetValue = if (isVaciarPressedInstant) 52.dp else 48.dp,
+                val vaciarPressExtra by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isVaciarPressedInstant) 3.dp else 0.dp,
                     animationSpec = androidx.compose.animation.core.spring(
                         dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                         stiffness = 400f
                     ),
-                    label = "vaciarButtonHeight"
+                    label = "vaciarButtonPressExtra"
                 )
                 val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
@@ -165,7 +166,8 @@ fun LaundryScreen(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 24.dp)
-                        .height(vaciarHeight)
+                        .growCentered(vaciarPressExtra)
+                        .height(48.dp + vaciarPressExtra * 2)
                         .onGloballyPositioned { coords ->
                             if (rootCoords != null && rootCoords!!.isAttached && coords.isAttached) {
                                 try {
@@ -238,7 +240,7 @@ fun LaundryScreen(
                         color = Color.White, 
                         fontSize = 16.sp, 
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 24.dp)
+                        modifier = Modifier.padding(horizontal = 24.dp + vaciarPressExtra)
                     )
                 }
             }

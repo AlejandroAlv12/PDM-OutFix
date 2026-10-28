@@ -35,6 +35,7 @@ import java.util.Calendar
 import com.pdm0126.outfix.ui.AppViewModel
 import com.pdm0126.outfix.ui.OutFixScreen
 import com.pdm0126.outfix.ui.liquidGlass
+import com.pdm0126.outfix.ui.growCentered
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Icon
@@ -318,18 +319,19 @@ fun DayCard(
             modifier = Modifier.align(Alignment.Center)
         ) {
             var isPressedInstant by remember { mutableStateOf(false) }
-            val buttonSize by androidx.compose.animation.core.animateDpAsState(
-                targetValue = if (isPressedInstant) 60.dp else 56.dp,
+            val pressExtra by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (isPressedInstant) 3.dp else 0.dp,
                 animationSpec = androidx.compose.animation.core.spring(
                     dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                     stiffness = 400f
                 ),
-                label = "editButtonSize"
+                label = "editButtonPressExtra"
             )
 
             Box(
                 modifier = Modifier
-                    .size(buttonSize)
+                    .growCentered(pressExtra)
+                    .size(56.dp + pressExtra * 2)
                     .onGloballyPositioned { buttonCoords = it }
                     .pointerInput(Unit) {
                         awaitEachGesture {
