@@ -623,6 +623,22 @@ fun FloatingBottomNavBar(
 
     val isActuallyCompact = isCompact && !isSliderActive
 
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(isSliderActive) {
+        if (isSliderActive) {
+            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        }
+    }
+
+    val currentSnappedPage = (pagerState.currentPage + pagerState.currentPageOffsetFraction).roundToInt()
+    var lastHapticPage by remember { mutableStateOf(currentSnappedPage) }
+    LaunchedEffect(currentSnappedPage) {
+        if (isSliderActive && currentSnappedPage != lastHapticPage) {
+            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+            lastHapticPage = currentSnappedPage
+        }
+    }
+
     val navBarPaddingHorizontal by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isActuallyCompact) 44.dp else 20.dp,
         animationSpec = androidx.compose.animation.core.spring(
@@ -648,10 +664,14 @@ fun FloatingBottomNavBar(
         label = "navBarHeight"
     )
     val ballSize by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (isActuallyCompact) 48.dp else 56.dp,
+        targetValue = when {
+            isSliderActive -> 85.dp
+            isActuallyCompact -> 48.dp
+            else -> 56.dp
+        },
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = 400f
         ),
         label = "ballSize"
     )
@@ -759,7 +779,7 @@ fun FloatingBottomNavBar(
         ) {
             Box(
                 modifier = Modifier
-                    .size(ballSize)
+                    .requiredSize(ballSize)
                     .clip(CircleShape)
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
